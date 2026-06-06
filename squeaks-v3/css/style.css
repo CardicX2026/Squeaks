@@ -593,3 +593,8 @@ footer{border-top:1px solid var(--border);padding:2rem 2.5rem;display:flex;justi
 
 /* Home NFT marquee enlarged 2.5x */
 #home-nft-marquee img{width:75px !important;height:75px !important;border-radius:10px !important}
+/* Force center on games + community block titles all screens */
+.blocks-grid .block:nth-child(2) .block-title,
+.blocks-grid .block:nth-child(5) .block-title {
+  text-align: center !important;
+}
