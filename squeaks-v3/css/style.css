@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;0,800;0,900;1,700&family=DM+Mono:wght@300;400;500&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Syne:wght@600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;500;600;700;800&family=DM+Mono:wght@300;400;500&display=swap');
 
 /* ── THEME ── */
 :root {
@@ -24,11 +24,11 @@
   --cx-blue: #1a3a6b;
   --shadow: 0 8px 48px rgba(0,0,0,0.6);
   --radius: 14px;
-  --font-body: 'Plus Jakarta Sans', sans-serif;
-  --font-display: 'Syne', sans-serif;
-  --font-head: 'Playfair Display', serif;
-  --font-sub: 'Syne', sans-serif;
-  --font-mono: 'DM Mono', monospace;
+ --font-body: 'Nunito', sans-serif;
+--font-display: 'Nunito', sans-serif;
+--font-head: 'Fredoka One', cursive;
+--font-sub: 'Nunito', sans-serif;
+--font-mono: 'DM Mono', monospace;
 }
 [data-theme="light"] {
   --bg: #faf9f6;
