@@ -664,4 +664,11 @@ document.addEventListener('DOMContentLoaded',()=>{
   setInterval(fetchPrices, 900000); // 15 minutes
   navigate('home');
   setTimeout(initHomeCountUps, 600);
+  // Handle URL hash routing
+function handleHashRoute() {
+  const hash = window.location.hash.replace('#', '');
+  if (hash) navigate(hash);
+}
+window.addEventListener('hashchange', handleHashRoute);
+handleHashRoute();
 });
