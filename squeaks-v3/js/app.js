@@ -672,3 +672,40 @@ function handleHashRoute() {
 window.addEventListener('hashchange', handleHashRoute);
 handleHashRoute();
 });
+
+
+//SOCIAL FEED
+const RSS2JSON_KEY = 'xtnj6ril6txyremvpkbfronyx96s8dcrbwwsusos';
+
+const SOCIAL_FEEDS = {
+  twitter: 'https://rss.app/feeds/Mc0KFmfcbDRfpMAk.xml',
+  // instagram: 'YOUR_INSTAGRAM_RSS_APP_FEED_URL',
+  // tiktok: 'YOUR_TIKTOK_RSS_APP_FEED_URL'
+};
+
+async function loadLatestPosts() {
+  const el = document.getElementById('latest-posts-list');
+  if (!el) return;
+  el.innerHTML = '<div style="color:var(--muted);font-size:.8rem">Loading latest posts...</div>';
+
+  let allPosts = [];
+  for (const [platform, feedUrl] of Object.entries(SOCIAL_FEEDS)) {
+    try {
+      const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}&api_key=${RSS2JSON_KEY}`);
+      const data = await res.json();
+      (data.items || []).slice(0, 3).forEach(item => {
+        allPosts.push({ platform, title: item.title, link: item.link, date: item.pubDate });
+      });
+    } catch(e) { console.warn(platform, 'feed error', e); }
+  }
+
+  allPosts.sort((a,b) => new Date(b.date) - new Date(a.date));
+
+  const icons = { twitter: '𝕏', instagram: '📷', tiktok: '🎵' };
+  el.innerHTML = allPosts.length ? allPosts.map(p => `
+    <a href="${p.link}" target="_blank" class="post-link-item">
+      <span class="post-link-icon">${icons[p.platform]}</span>
+      <span class="post-link-text">${p.title.slice(0,80)}${p.title.length>80?'...':''}</span>
+      <span class="post-link-date">${new Date(p.date).toLocaleDateString()}</span>
+    </a>`).join('') : '<div style="color:var(--muted);font-size:.8rem">No recent posts found.</div>';
+}
