@@ -1090,3 +1090,11 @@ async function loadEventLeaderboard(eventId) {
       </div>`;
     }).join('')}`;
 }
+async function loadDashboard() {
+  if (!currentUser || !userProfile) return;
+  // ... existing code ...
+  renderXPBar();
+  await loadOrders();
+  await loadXPHistory();
+  await loadEvents(); // ADD THIS LINE
+}
