@@ -575,12 +575,6 @@ async function loadDashboard() {
   renderXPBar(); await loadOrders(); await loadXPHistory();
   async function loadDashboard() {
   if (!currentUser || !userProfile) return;
-  // ... existing code ...
-  renderXPBar();
-  await loadOrders();
-  await loadXPHistory();
-  await loadEvents(); // ADD THIS LINE
-}
 }
 async function loadOrders() {
   const el=document.getElementById('orders-list'); if(!el||!currentUser) return;
