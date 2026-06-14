@@ -644,7 +644,7 @@ document.querySelectorAll('.filter-btn').forEach(btn=>{
 });
 document.querySelectorAll('.auth-tab').forEach(tab=>{
   tab.addEventListener('click',()=>{document.querySelectorAll('.auth-tab').forEach(t=>t.classList.remove('active'));document.querySelectorAll('.auth-form').forEach(f=>f.classList.remove('active'));tab.classList.add('active');document.getElementById('form-'+tab.dataset.form)?.classList.add('active');});
-});
+if (a.dataset.section === 'events') loadEvents();});
 
 // ══════════════════════════════
 // MODALS & TOAST
