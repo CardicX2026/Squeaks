@@ -573,6 +573,14 @@ async function loadDashboard() {
   const editB=document.getElementById('edit-bio'); if(editB) editB.value=userProfile.bio||'';
   const editW=document.getElementById('edit-wallet'); if(editW) editW.value=userProfile.wallet_address||'';
   renderXPBar(); await loadOrders(); await loadXPHistory();
+  async function loadDashboard() {
+  if (!currentUser || !userProfile) return;
+  // ... existing code ...
+  renderXPBar();
+  await loadOrders();
+  await loadXPHistory();
+  await loadEvents(); // ADD THIS LINE
+}
 }
 async function loadOrders() {
   const el=document.getElementById('orders-list'); if(!el||!currentUser) return;
@@ -1090,11 +1098,4 @@ async function loadEventLeaderboard(eventId) {
       </div>`;
     }).join('')}`;
 }
-async function loadDashboard() {
-  if (!currentUser || !userProfile) return;
-  // ... existing code ...
-  renderXPBar();
-  await loadOrders();
-  await loadXPHistory();
-  await loadEvents(); // ADD THIS LINE
-}
+
