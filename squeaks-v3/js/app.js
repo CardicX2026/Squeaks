@@ -1093,3 +1093,14 @@ async function loadEventLeaderboard(eventId) {
     }).join('')}`;
 }
 
+document.querySelectorAll('.dash-nav a').forEach(a => {
+  a.addEventListener('click', e => {
+    e.preventDefault();
+    document.querySelectorAll('.dash-nav a').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.dash-section').forEach(s => s.classList.remove('active'));
+    a.classList.add('active');
+    document.getElementById('ds-' + a.dataset.section)?.classList.add('active');
+    if (a.dataset.section === 'events') loadEvents();
+    if (a.dataset.section === 'quests') loadQuests();
+  });
+});
