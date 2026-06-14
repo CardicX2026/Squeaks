@@ -575,7 +575,7 @@ async function loadDashboard() {
   renderXPBar(); await loadOrders(); await loadXPHistory();
   async function loadDashboard() {
   if (!currentUser || !userProfile) return;
-}
+}}
 async function loadOrders() {
   const el=document.getElementById('orders-list'); if(!el||!currentUser) return;
   const {data}=await sb.from('orders').select('*').order('created_at',{ascending:false});
