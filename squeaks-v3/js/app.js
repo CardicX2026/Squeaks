@@ -709,3 +709,204 @@ async function loadLatestPosts() {
       <span class="post-link-date">${new Date(p.date).toLocaleDateString()}</span>
     </a>`).join('') : '<div style="color:var(--muted);font-size:.8rem">No recent posts found.</div>';
 }
+
+
+
+
+// ══════════════════════════════
+// EVENTS SYSTEM
+// ══════════════════════════════
+let currentEventId = null;
+
+async function loadEvents() {
+  const el = document.getElementById('events-list');
+  if (!el) return;
+  const { data: events } = await sb.from('events').select('*').order('created_at', { ascending: false });
+  if (!events || !events.length) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:.82rem;text-align:center;padding:2rem">No events yet. Check back soon.</div>';
+    return;
+  }
+  el.innerHTML = events.map(e => `
+    <div class="event-dash-card ${e.status}" onclick="openEventDetail('${e.id}')">
+      <div class="edc-header">
+        <div>
+          <div class="edc-status ${e.status}">${e.status === 'live' ? '🔴 Live Now' : e.status === 'upcoming' ? '🟡 Upcoming' : '⚪ Ended'}</div>
+          <div class="edc-title">${e.title}</div>
+          <div class="edc-prize">Prize Pool: <strong>${e.prize_pool}</strong></div>
+        </div>
+        <button class="btn btn-primary btn-sm">View Event →</button>
+      </div>
+      <div class="edc-desc">${e.description}</div>
+      ${e.ends_at ? `<div class="edc-ends">Ends: ${new Date(e.ends_at).toLocaleDateString('en-GB', {day:'numeric',month:'long',year:'numeric'})}</div>` : ''}
+    </div>`).join('');
+}
+
+async function openEventDetail(eventId) {
+  currentEventId = eventId;
+  const el = document.getElementById('event-detail-view');
+  const listEl = document.getElementById('events-list-view');
+  if (!el || !listEl) return;
+  listEl.style.display = 'none';
+  el.style.display = 'block';
+
+  const { data: event } = await sb.from('events').select('*').eq('id', eventId).single();
+  const { data: activities } = await sb.from('event_activities').select('*').eq('event_id', eventId).eq('is_active', true).order('sort_order');
+  const { data: joined } = currentUser ? await sb.from('event_joins').select('id').eq('user_id', currentUser.id).eq('event_id', eventId).single() : { data: null };
+
+  let completions = {};
+  if (currentUser) {
+    const { data: comp } = await sb.from('event_activity_completions').select('*').eq('user_id', currentUser.id).eq('event_id', eventId);
+    (comp || []).forEach(c => completions[c.activity_id] = c);
+  }
+
+  const isJoined = !!joined;
+
+  el.innerHTML = `
+    <button class="btn btn-ghost btn-sm" onclick="backToEvents()" style="margin-bottom:1.2rem">← Back to Events</button>
+    <div class="event-detail-header">
+      <div>
+        <div class="edc-status ${event.status}">${event.status === 'live' ? '🔴 Live Now' : event.status === 'upcoming' ? '🟡 Upcoming' : '⚪ Ended'}</div>
+        <h2 style="font-family:var(--font-head);font-size:1.8rem;margin:.3rem 0">${event.title}</h2>
+        <div style="color:var(--accent);font-family:var(--font-head);font-size:1.3rem">Prize Pool: ${event.prize_pool}</div>
+        <p style="color:var(--muted);font-size:.84rem;margin-top:.5rem;line-height:1.65">${event.prize_description}</p>
+      </div>
+    </div>
+
+    <!-- Activities -->
+    <h3 style="font-family:var(--font-head);font-size:1.3rem;margin:1.5rem 0 1rem">ACTIVITIES</h3>
+    <div id="event-activities-list">
+      ${(activities || []).map(a => {
+        const comp = completions[a.id];
+        const isDone = comp && (comp.status === 'approved' || comp.status === 'pending');
+        const isPending = comp && comp.status === 'pending';
+        const isApproved = comp && comp.status === 'approved';
+        const needsProof = a.requires_review;
+        const typeIcon = a.activity_type === 'prediction' ? '🔮' : a.activity_type === 'social_engage' ? '📣' : a.activity_type === 'join' ? '🎯' : '⚡';
+        return `
+        <div class="activity-card ${isApproved ? 'activity-done' : isPending ? 'activity-pending' : ''}">
+          <div class="activity-icon">${typeIcon}</div>
+          <div class="activity-info">
+            <div class="activity-title">${a.title}</div>
+            <div class="activity-desc">${a.description}</div>
+            ${isPending ? '<div class="activity-review-tag">⏳ Under Review</div>' : ''}
+            ${isApproved ? '<div class="activity-approved-tag">✅ Approved</div>' : ''}
+          </div>
+          <div class="activity-xp">+${a.xp_reward} XP</div>
+          <div class="activity-actions">
+            ${!isDone && a.action_url ? `<a href="${a.action_url}" target="_blank" class="btn btn-outline btn-sm">Go ↗</a>` : ''}
+            ${!isDone && needsProof
+              ? `<button class="btn btn-primary btn-sm" onclick="openProofModal('${a.id}','${a.activity_type}','${a.title.replace(/'/g,"\\'")}',${a.xp_reward})">Submit</button>`
+              : !isDone
+              ? `<button class="btn btn-primary btn-sm" onclick="claimActivity('${a.id}','${eventId}',${a.xp_reward})">Claim XP</button>`
+              : ''
+            }
+          </div>
+        </div>`;
+      }).join('')}
+    </div>
+
+    <!-- Leaderboard -->
+    <h3 style="font-family:var(--font-head);font-size:1.3rem;margin:2rem 0 1rem">EVENT LEADERBOARD</h3>
+    <div id="event-leaderboard"></div>`;
+
+  loadEventLeaderboard(eventId);
+}
+
+function backToEvents() {
+  document.getElementById('events-list-view').style.display = 'block';
+  document.getElementById('event-detail-view').style.display = 'none';
+  currentEventId = null;
+}
+
+async function claimActivity(activityId, eventId, xp) {
+  if (!currentUser) return showToast('🔐 Log in first');
+  try {
+    const { error } = await sb.from('event_activity_completions').insert({
+      user_id: currentUser.id,
+      event_id: eventId,
+      activity_id: activityId,
+      status: 'approved',
+      xp_awarded: xp
+    });
+    if (error) { showToast('⚠️ Already claimed'); return; }
+    const newXP = (userProfile?.xp || 0) + xp;
+    const newLevel = getLevel(newXP).level;
+    await sb.from('profiles').upsert({ id: currentUser.id, xp: newXP, level: newLevel }, { onConflict: 'id' });
+    userProfile = { ...userProfile, xp: newXP, level: newLevel };
+    renderXPBar();
+    showToast(`+${xp} XP earned! 🎉`);
+    openEventDetail(eventId);
+  } catch(e) { showToast('❌ ' + e.message); }
+}
+
+// Proof submission (predictions + manual verify)
+function openProofModal(activityId, activityType, title, xp) {
+  const isPrediction = activityType === 'prediction';
+  document.getElementById('proof-modal-body').innerHTML = `
+    <div class="modal-head">
+      <h2>${isPrediction ? '🔮 PREDICTION' : '📣 SUBMIT PROOF'}</h2>
+      <button class="modal-close" onclick="closeModal('proof-modal')">✕</button>
+    </div>
+    <p style="color:var(--muted);font-size:.84rem;margin-bottom:1rem">${title}</p>
+    ${isPrediction ? `
+      <div class="form-group">
+        <label class="form-label">Your Prediction</label>
+        <input class="form-input" id="proof-input" placeholder="e.g. Brazil 2 - 1 France / Brazil wins"/>
+        <div style="font-size:.7rem;color:var(--muted);margin-top:.3rem">Enter your predicted scoreline or match winner. Reviewed after the match.</div>
+      </div>` : `
+      <div class="form-group">
+        <label class="form-label">Proof (post link, username, or screenshot URL)</label>
+        <input class="form-input" id="proof-input" placeholder="e.g. https://x.com/yourhandle/status/..."/>
+      </div>`
+    }
+    <div style="display:flex;gap:.8rem;margin-top:1rem">
+      <button class="btn btn-primary" style="flex:1" onclick="submitProof('${activityId}','${currentEventId}',${xp})">Submit →</button>
+      <button class="btn btn-ghost" onclick="closeModal('proof-modal')">Cancel</button>
+    </div>`;
+  openModal('proof-modal');
+}
+
+async function submitProof(activityId, eventId, xp) {
+  const proof = document.getElementById('proof-input')?.value?.trim();
+  if (!proof) return showToast('⚠️ Enter your submission');
+  if (!currentUser) return showToast('🔐 Log in first');
+  try {
+    const { error } = await sb.from('event_activity_completions').insert({
+      user_id: currentUser.id,
+      event_id: eventId,
+      activity_id: activityId,
+      status: 'pending',
+      proof_text: proof,
+      xp_awarded: 0
+    });
+    if (error) { showToast('⚠️ Already submitted'); return; }
+    closeModal('proof-modal');
+    showToast('✅ Submitted! Under review.');
+    openEventDetail(eventId);
+  } catch(e) { showToast('❌ ' + e.message); }
+}
+
+async function loadEventLeaderboard(eventId) {
+  const el = document.getElementById('event-leaderboard');
+  if (!el) return;
+  const { data } = await sb.from('event_leaderboard').select('*').eq('event_id', eventId).order('rank').limit(20);
+  if (!data || !data.length) {
+    el.innerHTML = '<div style="color:var(--muted);font-size:.8rem">No activity yet. Be the first!</div>';
+    return;
+  }
+  el.innerHTML = `
+    <div class="leaderboard-header">
+      <span>Rank</span><span>User</span><span>Activities</span><span>Event XP</span>
+    </div>
+    ${data.map((row, i) => {
+      const isMe = currentUser && row.user_id === currentUser.id;
+      const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${row.rank}`;
+      return `
+      <div class="leaderboard-row ${isMe ? 'leaderboard-me' : ''}">
+        <span class="lb-rank">${medal}</span>
+        <span class="lb-user">${row.username || 'Anonymous'}${isMe ? ' (you)' : ''}</span>
+        <span class="lb-acts" style="color:var(--muted);font-size:.78rem">${row.completed_activities} done</span>
+        <span class="lb-xp">${parseInt(row.event_xp).toLocaleString()} XP</span>
+      </div>`;
+    }).join('')}`;
+}
