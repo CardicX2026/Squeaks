@@ -1140,8 +1140,8 @@ document.querySelectorAll('.dash-nav a').forEach(a => {
     if (a.dataset.section === 'events') loadEvents();
     if (a.dataset.section === 'quests') loadQuests();
   });
-});
-async function loadEventSocialPosts() {
+
+  async function loadEventSocialPosts() {
   // ... function code
 }
 
@@ -1150,3 +1150,5 @@ async function claimPostAction(actionId, xp, label) {
 }
 
 }); // <-- this is the last line, DOMContentLoaded closing
+
+});
