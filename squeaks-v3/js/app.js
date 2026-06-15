@@ -856,90 +856,74 @@ async function loadEventLeaderboard(eventId) {
 });
 
 
-// ══════════════════════════════
-// DAILY SOCIAL ENGAGEMENT
-// ══════════════════════════════
-const SOCIAL_FEEDS = {
-  twitter: 'https://rss.app/feeds/0HzPY91DiF2sHx93.xml',
-  instagram: 'https://rss.app/feeds/Mc0KFmfcbDRfpMAk.xml',
-  tiktok: 'https://rss.app/feeds/saxncBXL5xmGeUIj.xml'
-};
-const RSS2JSON_KEY = 'xtnj6ril6txyremvpkbfronyx96s8dcrbwwsusos';
-const MAX_POSTS = 5;
-
-async function loadSocialEngagement() {
-  const el = document.getElementById('social-engagement-list');
+async function loadEventSocialPosts() {
+  const el = document.getElementById('event-social-list');
   if (!el) return;
-  el.innerHTML = '<div style="color:var(--muted);font-size:.8rem">Loading latest posts...</div>';
 
-  const platformConfig = {
-    twitter: { label: 'Twitter / X', icon: '𝕏', color: '#1da1f2' },
-    instagram: { label: 'Instagram', icon: '📷', color: '#e1306c' },
-    tiktok: { label: 'TikTok', icon: '🎵', color: '#ff0050' }
+  const FEED_URL = 'https://rss.app/feeds/Mc0KFmfcbDRfpMAk.xml';
+  const RSS2JSON_KEY = 'xtnj6ril6txyremvpkbfronyx96s8dcrbwwsusos';
+  const platforms = {
+    twitter: { label: 'Twitter / X', icon: '𝕏', color: '#1da1f2', feed: 'https://rss.app/feeds/0HzPY91DiF2sHx93.xml' },
+    instagram: { label: 'Instagram', icon: '📷', color: '#e1306c', feed: 'https://rss.app/feeds/Mc0KFmfcbDRfpMAk.xml' },
+    tiktok: { label: 'TikTok', icon: '🎵', color: '#ff0050', feed: 'https://rss.app/feeds/saxncBXL5xmGeUIj.xml' }
   };
 
   let html = '';
 
-  for (const [platform, feedUrl] of Object.entries(SOCIAL_FEEDS)) {
-    if (!feedUrl || feedUrl.includes('YOUR_')) continue;
-    const config = platformConfig[platform];
+  for (const [platform, config] of Object.entries(platforms)) {
+    if (config.feed.includes('YOUR_')) continue;
     let posts = [];
-
     try {
-      const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}&api_key=${RSS2JSON_KEY}&count=${MAX_POSTS}`);
+      const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(config.feed)}&api_key=${RSS2JSON_KEY}&count=5`);
       const data = await res.json();
-      posts = (data.items || []).slice(0, MAX_POSTS);
-    } catch(e) {
-      console.warn(platform, 'feed error', e);
-    }
+      posts = (data.items || []).slice(0, 5);
+    } catch(e) { console.warn(platform, e); }
 
     html += `
       <div class="social-engage-group">
         <div class="seg-platform-header" style="border-color:${config.color}">
           <span class="seg-icon">${config.icon}</span>
           <span class="seg-platform-name">${config.label}</span>
-          <span class="seg-count">${posts.length} posts</span>
         </div>
-        ${posts.length ? posts.map((p, i) => {
-          const questId = `social_${platform}_${i}`;
-          return `
+        ${posts.length ? posts.map((p, i) => `
           <div class="seg-post-item">
             <div class="seg-post-info">
-              <a href="${p.link}" target="_blank" class="seg-post-title">${p.title?.slice(0,100) || 'View Post'}${p.title?.length > 100 ? '...' : ''}</a>
-              <div class="seg-post-date">${new Date(p.pubDate).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}</div>
+              <a href="${p.link}" target="_blank" class="seg-post-title">${(p.title||'View Post').slice(0,80)}${(p.title||'').length>80?'...':''}</a>
+              <div class="seg-post-date">${new Date(p.pubDate).toLocaleDateString('en-GB',{day:'numeric',month:'short'})}</div>
             </div>
-            <div style="display:flex;gap:.4rem;align-items:center;flex-shrink:0">
-              <a href="${p.link}" target="_blank" class="btn btn-outline btn-sm">View ↗</a>
-              <button class="btn btn-primary btn-sm" onclick="claimSocialEngagement('${questId}','${platform}','${p.link}',25)">+25 XP</button>
+            <div style="display:flex;gap:.4rem;flex-wrap:wrap;flex-shrink:0">
+              <button class="btn btn-outline btn-sm" onclick="window.open('${p.link}','_blank')">View ↗</button>
+              <button class="btn btn-sm" style="background:var(--red-dim);color:var(--red);border:1px solid rgba(200,36,43,.2)" onclick="claimPostAction('${platform}_like_${i}',5,'❤️ Liked')">❤️ +5</button>
+              <button class="btn btn-sm" style="background:var(--accent-dim);color:var(--accent);border:1px solid rgba(255,184,154,.2)" onclick="claimPostAction('${platform}_comment_${i}',5,'💬 Commented')">💬 +5</button>
+              <button class="btn btn-sm" style="background:rgba(79,255,160,.08);color:var(--green);border:1px solid rgba(79,255,160,.2)" onclick="claimPostAction('${platform}_repost_${i}',5,'🔁 Reposted')">🔁 +5</button>
             </div>
-          </div>`;
-        }).join('') : `<div style="color:var(--muted);font-size:.78rem;padding:.8rem 0">No posts found.</div>`}
+          </div>`).join('') : `<div style="color:var(--muted);font-size:.78rem;padding:.6rem 0">No posts found.</div>`}
       </div>`;
   }
 
-  el.innerHTML = html || '<div style="color:var(--muted);font-size:.8rem">No social feeds configured yet.</div>';
+  el.innerHTML = html || '<div style="color:var(--muted);font-size:.8rem">No posts available.</div>';
 }
 
-async function claimSocialEngagement(questId, platform, postUrl, xp) {
+async function claimPostAction(actionId, xp, label) {
   if (!currentUser) return showToast('🔐 Log in first');
+  // Use today's date so actions reset daily
+  const today = new Date().toISOString().split('T')[0];
+  const questId = `post_${actionId}_${today}`;
   try {
     const { error } = await sb.from('quest_completions').insert({
       user_id: currentUser.id,
       quest_id: questId,
       xp_awarded: xp
     });
-    if (error) { showToast('⚠️ Already claimed'); return; }
+    if (error) { showToast(`⚠️ Already claimed today`); return; }
     const newXP = (userProfile?.xp || 0) + xp;
     const newLevel = getLevel(newXP).level;
     await sb.from('profiles').upsert({ id: currentUser.id, xp: newXP, level: newLevel }, { onConflict: 'id' });
     userProfile = { ...userProfile, xp: newXP, level: newLevel };
     renderXPBar();
-    showToast(`+${xp} XP — Keep engaging! 🎉`);
-    loadSocialEngagement();
+    showToast(`+${xp} XP — ${label} 🎉`);
   } catch(e) { showToast('❌ ' + e.message); }
 }
-
-
 
 
 // ══════════════════════════════
