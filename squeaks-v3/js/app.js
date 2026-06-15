@@ -765,7 +765,7 @@ async function openEventDetail(eventId) {
 
 loadEventLeaderboard(eventId);
   loadEventSocialPosts();
-}}
+}
 
 function backToEvents() {
   document.getElementById('events-list-view').style.display = 'block';
@@ -1029,7 +1029,7 @@ async function openEventDetail(eventId) {
 
 loadEventLeaderboard(eventId);
   loadEventSocialPosts();
-}}
+}
 
 function backToEvents() {
   document.getElementById('events-list-view').style.display = 'block';
