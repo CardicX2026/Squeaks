@@ -1113,11 +1113,11 @@ async function loadEventSocialPosts() {
       postsHtml += '<div class="seg-post-date">' + date + '</div>';
       postsHtml += '</div>';
       postsHtml += '<div style="display:flex;gap:.4rem;flex-wrap:wrap;flex-shrink:0">';
-      postsHtml += '<button class="btn btn-outline btn-sm" onclick="window.open(\'' + p.link + '\',\'_blank\')">View ↗</button>';
-      postsHtml += '<button class="btn btn-sm" style="background:var(--red-dim);color:var(--red);border:1px solid rgba(200,36,43,.2)" onclick="claimPostAction(\'' + platform + '_like_' + i + '\',5,\'❤️ Liked\')">❤️ +5</button>';
-      postsHtml += '<button class="btn btn-sm" style="background:var(--accent-dim);color:var(--accent);border:1px solid rgba(255,184,154,.2)" onclick="claimPostAction(\'' + platform + '_comment_' + i + '\',5,\'💬 Commented\')">💬 +5</button>';
-      postsHtml += '<button class="btn btn-sm" style="background:rgba(79,255,160,.08);color:var(--green);border:1px solid rgba(79,255,160,.2)" onclick="claimPostAction(\'' + platform + '_repost_' + i + '\',5,\'🔁 Reposted\')">🔁 +5</button>';
-      postsHtml += '</div></div>';
+postsHtml += '<button class="btn btn-outline btn-sm" id="view-' + platform + '-' + i + '" onclick="startEngageTimer(\'' + platform + '\',\'' + i + '\',\'' + p.link + '\')">View ↗</button>';
+postsHtml += '<button class="btn btn-sm" id="like-' + platform + '-' + i + '" disabled style="opacity:.4;background:var(--red-dim);color:var(--red);border:1px solid rgba(200,36,43,.2)" onclick="claimPostAction(\'' + platform + '_like_' + i + '\',5,\'❤️ Liked\')">❤️ +5</button>';
+postsHtml += '<button class="btn btn-sm" id="comment-' + platform + '-' + i + '" disabled style="opacity:.4;background:var(--accent-dim);color:var(--accent);border:1px solid rgba(255,184,154,.2)" onclick="claimPostAction(\'' + platform + '_comment_' + i + '\',5,\'💬 Commented\')">💬 +5</button>';
+postsHtml += '<button class="btn btn-sm" id="repost-' + platform + '-' + i + '" disabled style="opacity:.4;background:rgba(79,255,160,.08);color:var(--green);border:1px solid rgba(79,255,160,.2)" onclick="claimPostAction(\'' + platform + '_repost_' + i + '\',5,\'🔁 Reposted\')">🔁 +5</button>';
+postsHtml += '</div></div>';
     }
     if (!posts.length) postsHtml = '<div style="color:var(--muted);font-size:.78rem;padding:.6rem 0">No posts found.</div>';
     html += '<div class="social-engage-group">';
@@ -1160,4 +1160,35 @@ async function claimPostAction(actionId, xp, label) {
     // refresh leaderboard
     if (currentEventId) loadEventLeaderboard(currentEventId);
   } catch(e) { showToast('❌ ' + e.message); }
+}
+
+function startEngageTimer(platform, idx, link) {
+  window.open(link, '_blank');
+  const actions = ['like', 'comment', 'repost'];
+  let seconds = 5;
+  // show countdown on view button
+  const viewBtn = document.getElementById('view-' + platform + '-' + idx);
+  if (viewBtn) {
+    viewBtn.disabled = true;
+    viewBtn.textContent = 'Wait ' + seconds + 's...';
+  }
+  const countdown = setInterval(function() {
+    seconds--;
+    if (viewBtn) viewBtn.textContent = 'Wait ' + seconds + 's...';
+    if (seconds <= 0) {
+      clearInterval(countdown);
+      if (viewBtn) {
+        viewBtn.textContent = '✓ Viewed';
+        viewBtn.disabled = false;
+      }
+      // unlock the claim buttons
+      actions.forEach(function(action) {
+        const btn = document.getElementById(action + '-' + platform + '-' + idx);
+        if (btn) {
+          btn.disabled = false;
+          btn.style.opacity = '1';
+        }
+      });
+    }
+  }, 1000);
 }
