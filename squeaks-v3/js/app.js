@@ -922,8 +922,25 @@ async function openEventDetail(eventId) {
     </div>
 
     <!-- Activities -->
-    <h3 style="font-family:var(--font-head);font-size:1.3rem;margin:1.5rem 0 1rem">ACTIVITIES</h3>
+     <h3 style="font-family:var(--font-head);font-size:1.3rem;margin-bottom:1rem">ACTIVITIES</h3>
     <div id="event-activities-list">
+Then find where the activities list closes — look for this line:
+js      }).join('')}
+    </div>
+Right after that </div> add:
+js    <h3 style="font-family:var(--font-head);font-size:1.3rem;margin:2rem 0 1rem">DAILY SOCIAL <em style="color:var(--accent)">ENGAGEMENT</em></h3>
+    <p style="color:var(--muted);font-size:.82rem;margin-bottom:1rem">Engage with our latest posts. Resets daily.</p>
+    <div id="event-social-list"><div style="color:var(--muted);font-size:.8rem;padding:1rem">Loading posts...</div></div>
+So the full order inside openEventDetail becomes:
+ACTIVITIES header
+activities list div
+DAILY SOCIAL ENGAGEMENT header + div
+EVENT LEADERBOARD header + div
+Also make sure loadEventSocialPosts() is being called at the end of openEventDetail — find:
+js  loadEventLeaderboard(eventId);
+And make sure the line below it is:
+js  loadEventSocialPosts();
+loadEventSocialPosts();
       ${(activities || []).map(a => {
         const comp = completions[a.id];
         const isDone = comp && (comp.status === 'approved' || comp.status === 'pending');
@@ -953,6 +970,9 @@ async function openEventDetail(eventId) {
         </div>`;
       }).join('')}
     </div>
+    <h3 style="font-family:var(--font-head);font-size:1.3rem;margin:2rem 0 1rem">DAILY SOCIAL <em style="color:var(--accent)">ENGAGEMENT</em></h3>
+    <p style="color:var(--muted);font-size:.82rem;margin-bottom:1rem">Engage with our latest posts. Resets daily.</p>
+    <div id="event-social-list"><div style="color:var(--muted);font-size:.8rem;padding:1rem">Loading posts...</div></div>
 
     <!-- Leaderboard -->
     <h3 style="font-family:var(--font-head);font-size:1.3rem;margin:2rem 0 1rem">EVENT LEADERBOARD</h3>
