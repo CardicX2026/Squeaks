@@ -856,40 +856,87 @@ async function loadEventLeaderboard(eventId) {
 });
 
 
-//SOCIAL FEED
-const RSS2JSON_KEY = 'xtnj6ril6txyremvpkbfronyx96s8dcrbwwsusos';
-
+// ══════════════════════════════
+// DAILY SOCIAL ENGAGEMENT
+// ══════════════════════════════
 const SOCIAL_FEEDS = {
-  twitter: 'https://rss.app/feeds/Mc0KFmfcbDRfpMAk.xml',
-  // instagram: 'YOUR_INSTAGRAM_RSS_APP_FEED_URL',
-  // tiktok: 'YOUR_TIKTOK_RSS_APP_FEED_URL'
+  twitter: 'https://rss.app/feeds/0HzPY91DiF2sHx93.xml',
+  instagram: 'https://rss.app/feeds/Mc0KFmfcbDRfpMAk.xml',
+  tiktok: 'https://rss.app/feeds/saxncBXL5xmGeUIj.xml'
 };
+const RSS2JSON_KEY = 'xtnj6ril6txyremvpkbfronyx96s8dcrbwwsusos';
+const MAX_POSTS = 5;
 
-async function loadLatestPosts() {
-  const el = document.getElementById('latest-posts-list');
+async function loadSocialEngagement() {
+  const el = document.getElementById('social-engagement-list');
   if (!el) return;
   el.innerHTML = '<div style="color:var(--muted);font-size:.8rem">Loading latest posts...</div>';
 
-  let allPosts = [];
+  const platformConfig = {
+    twitter: { label: 'Twitter / X', icon: '𝕏', color: '#1da1f2' },
+    instagram: { label: 'Instagram', icon: '📷', color: '#e1306c' },
+    tiktok: { label: 'TikTok', icon: '🎵', color: '#ff0050' }
+  };
+
+  let html = '';
+
   for (const [platform, feedUrl] of Object.entries(SOCIAL_FEEDS)) {
+    if (!feedUrl || feedUrl.includes('YOUR_')) continue;
+    const config = platformConfig[platform];
+    let posts = [];
+
     try {
-      const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}&api_key=${RSS2JSON_KEY}`);
+      const res = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feedUrl)}&api_key=${RSS2JSON_KEY}&count=${MAX_POSTS}`);
       const data = await res.json();
-      (data.items || []).slice(0, 3).forEach(item => {
-        allPosts.push({ platform, title: item.title, link: item.link, date: item.pubDate });
-      });
-    } catch(e) { console.warn(platform, 'feed error', e); }
+      posts = (data.items || []).slice(0, MAX_POSTS);
+    } catch(e) {
+      console.warn(platform, 'feed error', e);
+    }
+
+    html += `
+      <div class="social-engage-group">
+        <div class="seg-platform-header" style="border-color:${config.color}">
+          <span class="seg-icon">${config.icon}</span>
+          <span class="seg-platform-name">${config.label}</span>
+          <span class="seg-count">${posts.length} posts</span>
+        </div>
+        ${posts.length ? posts.map((p, i) => {
+          const questId = `social_${platform}_${i}`;
+          return `
+          <div class="seg-post-item">
+            <div class="seg-post-info">
+              <a href="${p.link}" target="_blank" class="seg-post-title">${p.title?.slice(0,100) || 'View Post'}${p.title?.length > 100 ? '...' : ''}</a>
+              <div class="seg-post-date">${new Date(p.pubDate).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})}</div>
+            </div>
+            <div style="display:flex;gap:.4rem;align-items:center;flex-shrink:0">
+              <a href="${p.link}" target="_blank" class="btn btn-outline btn-sm">View ↗</a>
+              <button class="btn btn-primary btn-sm" onclick="claimSocialEngagement('${questId}','${platform}','${p.link}',25)">+25 XP</button>
+            </div>
+          </div>`;
+        }).join('') : `<div style="color:var(--muted);font-size:.78rem;padding:.8rem 0">No posts found.</div>`}
+      </div>`;
   }
 
-  allPosts.sort((a,b) => new Date(b.date) - new Date(a.date));
+  el.innerHTML = html || '<div style="color:var(--muted);font-size:.8rem">No social feeds configured yet.</div>';
+}
 
-  const icons = { twitter: '𝕏', instagram: '📷', tiktok: '🎵' };
-  el.innerHTML = allPosts.length ? allPosts.map(p => `
-    <a href="${p.link}" target="_blank" class="post-link-item">
-      <span class="post-link-icon">${icons[p.platform]}</span>
-      <span class="post-link-text">${p.title.slice(0,80)}${p.title.length>80?'...':''}</span>
-      <span class="post-link-date">${new Date(p.date).toLocaleDateString()}</span>
-    </a>`).join('') : '<div style="color:var(--muted);font-size:.8rem">No recent posts found.</div>';
+async function claimSocialEngagement(questId, platform, postUrl, xp) {
+  if (!currentUser) return showToast('🔐 Log in first');
+  try {
+    const { error } = await sb.from('quest_completions').insert({
+      user_id: currentUser.id,
+      quest_id: questId,
+      xp_awarded: xp
+    });
+    if (error) { showToast('⚠️ Already claimed'); return; }
+    const newXP = (userProfile?.xp || 0) + xp;
+    const newLevel = getLevel(newXP).level;
+    await sb.from('profiles').upsert({ id: currentUser.id, xp: newXP, level: newLevel }, { onConflict: 'id' });
+    userProfile = { ...userProfile, xp: newXP, level: newLevel };
+    renderXPBar();
+    showToast(`+${xp} XP — Keep engaging! 🎉`);
+    loadSocialEngagement();
+  } catch(e) { showToast('❌ ' + e.message); }
 }
 
 
