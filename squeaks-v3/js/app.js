@@ -1150,5 +1150,3 @@ async function claimPostAction(actionId, xp, label) {
 }
 
 }); // <-- this is the last line, DOMContentLoaded closing
-
-});
