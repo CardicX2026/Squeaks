@@ -1141,12 +1141,3 @@ document.querySelectorAll('.dash-nav a').forEach(a => {
     if (a.dataset.section === 'quests') loadQuests();
   });
 
-  async function loadEventSocialPosts() {
-  // ... function code
-}
-
-async function claimPostAction(actionId, xp, label) {
-  // ... function code
-}
-
-}); // <-- this is the last line, DOMContentLoaded closing
