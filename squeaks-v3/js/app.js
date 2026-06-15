@@ -763,8 +763,9 @@ async function openEventDetail(eventId) {
     <h3 style="font-family:var(--font-head);font-size:1.3rem;margin:2rem 0 1rem">EVENT LEADERBOARD</h3>
     <div id="event-leaderboard"></div>`;
 
-  loadEventLeaderboard(eventId);
-}
+loadEventLeaderboard(eventId);
+  loadEventSocialPosts();
+}}
 
 function backToEvents() {
   document.getElementById('events-list-view').style.display = 'block';
@@ -1026,8 +1027,9 @@ async function openEventDetail(eventId) {
     <h3 style="font-family:var(--font-head);font-size:1.3rem;margin:2rem 0 1rem">EVENT LEADERBOARD</h3>
     <div id="event-leaderboard"></div>`;
 
-  loadEventLeaderboard(eventId);
-}
+loadEventLeaderboard(eventId);
+  loadEventSocialPosts();
+}}
 
 function backToEvents() {
   document.getElementById('events-list-view').style.display = 'block';
