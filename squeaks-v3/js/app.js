@@ -1140,12 +1140,25 @@ async function claimPostAction(actionId, xp, label) {
       xp_awarded: xp
     });
     if (error) { showToast('⚠️ Already claimed today'); return; }
+    // update XP
     const newXP = (userProfile.xp || 0) + xp;
     const newLevel = getLevel(newXP).level;
     await sb.from('profiles').upsert({ id: currentUser.id, xp: newXP, level: newLevel }, { onConflict: 'id' });
     userProfile = Object.assign({}, userProfile, { xp: newXP, level: newLevel });
+    // also credit to event leaderboard if inside an event
+    if (currentEventId) {
+      await sb.from('event_activity_completions').insert({
+        user_id: currentUser.id,
+        event_id: currentEventId,
+        activity_id: '00000000-0000-0000-0000-000000000000',
+        status: 'approved',
+        xp_awarded: xp,
+        proof_text: questId
+      }).then(() => {}).catch(() => {});
+    }
     renderXPBar();
     showToast('+' + xp + ' XP — ' + label + ' 🎉');
+    // refresh leaderboard
+    if (currentEventId) loadEventLeaderboard(currentEventId);
   } catch(e) { showToast('❌ ' + e.message); }
 }
-
