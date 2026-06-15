@@ -929,8 +929,7 @@ async function openEventDetail(eventId) {
 <h3 style="font-family:var(--font-head);font-size:1.3rem;margin:2rem 0 1rem">DAILY SOCIAL <em style="color:var(--accent)">ENGAGEMENT</em></h3>
     <p style="color:var(--muted);font-size:.82rem;margin-bottom:1rem">Engage with our latest posts. Resets daily.</p>
     <div id="event-social-list"><div style="color:var(--muted);font-size:.8rem;padding:1rem">Loading posts...</div></div>
-loadEventSocialPosts();
-loadEventSocialPosts();
+
       ${(activities || []).map(a => {
         const comp = completions[a.id];
         const isDone = comp && (comp.status === 'approved' || comp.status === 'pending');
