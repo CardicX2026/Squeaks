@@ -684,3 +684,19 @@ footer{border-top:1px solid var(--border);padding:2rem 2.5rem;display:flex;justi
 .lb-acts{width:80px;text-align:center;font-size:.78rem;color:var(--muted)}
 .lb-xp{width:80px;text-align:right;font-family:var(--font-head);font-size:1rem;color:var(--accent)}
 
+
+
+
+/* Daily Social Engagement */
+.social-engage-group{margin-bottom:1.5rem}
+.seg-platform-header{display:flex;align-items:center;gap:.7rem;padding:.6rem 1rem;background:var(--surface2);border-radius:10px;border-left:3px solid;margin-bottom:.6rem}
+.seg-icon{font-size:1.1rem}
+.seg-platform-name{font-weight:700;font-size:.88rem;font-family:var(--font-sub);flex:1}
+.seg-count{font-size:.65rem;color:var(--muted);font-family:var(--font-mono)}
+.seg-post-item{display:flex;align-items:center;gap:.8rem;padding:.75rem 1rem;background:var(--card);border:1px solid var(--border);border-radius:10px;margin-bottom:.4rem;flex-wrap:wrap;transition:border-color .2s}
+.seg-post-item:hover{border-color:var(--border2)}
+.seg-post-info{flex:1;min-width:160px}
+.seg-post-title{font-size:.82rem;font-weight:600;color:var(--text);text-decoration:none;display:block;margin-bottom:.2rem;font-family:var(--font-sub)}
+.seg-post-title:hover{color:var(--accent)}
+.seg-post-date{font-size:.65rem;color:var(--muted);font-family:var(--font-mono)}
+
