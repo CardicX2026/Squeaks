@@ -1150,7 +1150,6 @@ async function claimPostAction(actionId, xp, label) {
       await sb.from('event_activity_completions').insert({
         user_id: currentUser.id,
         event_id: currentEventId,
-        activity_id: '00000000-0000-0000-0000-000000000000',
         status: 'approved',
         xp_awarded: xp,
         proof_text: questId
