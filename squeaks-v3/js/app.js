@@ -1141,3 +1141,71 @@ document.querySelectorAll('.dash-nav a').forEach(a => {
     if (a.dataset.section === 'quests') loadQuests();
   });
 
+
+
+  }); // <-- this is already there, paste BELOW it
+
+async function loadEventSocialPosts() {
+  const el = document.getElementById('event-social-list');
+  if (!el) return;
+  const RSS2JSON_KEY = 'xtnj6ril6txyremvpkbfronyx96s8dcrbwwsusos';
+  const platforms = {
+    twitter:   { label:'Twitter / X', icon:'𝕏',  color:'#1da1f2', feed:'https://rss.app/feeds/0HzPY91DiF2sHx93.xml' },
+    tiktok:    { label:'TikTok',      icon:'🎵', color:'#ff0050', feed:'https://rss.app/feeds/saxncBXL5xmGeUIj.xml' },
+    instagram: { label:'Instagram',   icon:'📷', color:'#e1306c', feed:'https://rss.app/feeds/Mc0KFmfcbDRfpMAk.xml' }
+  };
+  let html = '';
+  for (const [platform, config] of Object.entries(platforms)) {
+    let posts = [];
+    try {
+      const res = await fetch('https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent(config.feed) + '&api_key=' + RSS2JSON_KEY + '&count=5');
+      const data = await res.json();
+      posts = (data.items || []).slice(0, 5);
+    } catch(e) { console.warn(platform, e); }
+    let postsHtml = '';
+    for (let i = 0; i < posts.length; i++) {
+      const p = posts[i];
+      const title = (p.title || 'View Post').slice(0, 80) + ((p.title || '').length > 80 ? '...' : '');
+      const date = new Date(p.pubDate).toLocaleDateString('en-GB', {day:'numeric', month:'short'});
+      postsHtml += '<div class="seg-post-item">';
+      postsHtml += '<div class="seg-post-info">';
+      postsHtml += '<a href="' + p.link + '" target="_blank" class="seg-post-title">' + title + '</a>';
+      postsHtml += '<div class="seg-post-date">' + date + '</div>';
+      postsHtml += '</div>';
+      postsHtml += '<div style="display:flex;gap:.4rem;flex-wrap:wrap;flex-shrink:0">';
+      postsHtml += '<button class="btn btn-outline btn-sm" onclick="window.open(\'' + p.link + '\',\'_blank\')">View ↗</button>';
+      postsHtml += '<button class="btn btn-sm" style="background:var(--red-dim);color:var(--red);border:1px solid rgba(200,36,43,.2)" onclick="claimPostAction(\'' + platform + '_like_' + i + '\',5,\'❤️ Liked\')">❤️ +5</button>';
+      postsHtml += '<button class="btn btn-sm" style="background:var(--accent-dim);color:var(--accent);border:1px solid rgba(255,184,154,.2)" onclick="claimPostAction(\'' + platform + '_comment_' + i + '\',5,\'💬 Commented\')">💬 +5</button>';
+      postsHtml += '<button class="btn btn-sm" style="background:rgba(79,255,160,.08);color:var(--green);border:1px solid rgba(79,255,160,.2)" onclick="claimPostAction(\'' + platform + '_repost_' + i + '\',5,\'🔁 Reposted\')">🔁 +5</button>';
+      postsHtml += '</div></div>';
+    }
+    if (!posts.length) postsHtml = '<div style="color:var(--muted);font-size:.78rem;padding:.6rem 0">No posts found.</div>';
+    html += '<div class="social-engage-group">';
+    html += '<div class="seg-platform-header" style="border-color:' + config.color + '">';
+    html += '<span class="seg-icon">' + config.icon + '</span>';
+    html += '<span class="seg-platform-name">' + config.label + '</span>';
+    html += '</div>' + postsHtml + '</div>';
+  }
+  el.innerHTML = html || '<div style="color:var(--muted);font-size:.8rem">No posts available.</div>';
+}
+
+async function claimPostAction(actionId, xp, label) {
+  if (!currentUser) return showToast('🔐 Log in first');
+  const today = new Date().toISOString().split('T')[0];
+  const questId = 'post_' + actionId + '_' + today;
+  try {
+    const { error } = await sb.from('quest_completions').insert({
+      user_id: currentUser.id,
+      quest_id: questId,
+      xp_awarded: xp
+    });
+    if (error) { showToast('⚠️ Already claimed today'); return; }
+    const newXP = (userProfile.xp || 0) + xp;
+    const newLevel = getLevel(newXP).level;
+    await sb.from('profiles').upsert({ id: currentUser.id, xp: newXP, level: newLevel }, { onConflict: 'id' });
+    userProfile = Object.assign({}, userProfile, { xp: newXP, level: newLevel });
+    renderXPBar();
+    showToast('+' + xp + ' XP — ' + label + ' 🎉');
+  } catch(e) { showToast('❌ ' + e.message); }
+}
+
