@@ -930,7 +930,6 @@ async function openEventDetail(eventId) {
     <!-- Activities -->
  <h3 style="font-family:var(--font-head);font-size:1.3rem;margin-bottom:1rem">ACTIVITIES</h3>
     <div id="event-activities-list">
-      ${(activities||[]).map(a => { ... }).join('')}
     </div>
 
     <h3 style="font-family:var(--font-head);font-size:1.3rem;margin:2rem 0 1rem">DAILY SOCIAL <em style="color:var(--accent)">ENGAGEMENT</em></h3>
