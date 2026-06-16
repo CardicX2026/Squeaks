@@ -919,11 +919,6 @@ async function openEventDetail(eventId) {
       </div>
     </div>
 
-    <!-- Activities -->
-     <h3 style="font-family:var(--font-head);font-size:1.3rem;margin-bottom:1rem">ACTIVITIES</h3>
-    <div id="event-social-list"><div style="color:var(--muted);font-size:.8rem;padding:1rem">Loading posts...</div></div>
-    <div id="event-activities-list">
-
     </div>
 <h3 style="font-family:var(--font-head);font-size:1.3rem;margin:2rem 0 1rem">DAILY SOCIAL <em style="color:var(--accent)">ENGAGEMENT</em></h3>
     <p style="color:var(--muted);font-size:.82rem;margin-bottom:1rem">Engage with our latest posts. +5 XP per action. Resets daily.</p>
@@ -931,6 +926,14 @@ async function openEventDetail(eventId) {
     <h3 style="font-family:var(--font-head);font-size:1.3rem;margin:2rem 0 1rem">EVENT LEADERBOARD</h3>
     <div id="event-leaderboard"></div>
     <p style="color:var(--muted);font-size:.82rem;margin-bottom:1rem">Engage with our latest posts. Resets daily.</p>
+    <div id="event-social-list"><div style="color:var(--muted);font-size:.8rem;padding:1rem">Loading posts...</div></div>
+
+    <!-- Activities -->
+     <h3 style="font-family:var(--font-head);font-size:1.3rem;margin-bottom:1rem">ACTIVITIES</h3>
+    <div id="event-activities-list">
+
+
+
 
       ${(activities || []).map(a => {
         const comp = completions[a.id];
