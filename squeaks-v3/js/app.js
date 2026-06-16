@@ -921,8 +921,8 @@ async function openEventDetail(eventId) {
 
     <!-- Activities -->
      <h3 style="font-family:var(--font-head);font-size:1.3rem;margin-bottom:1rem">ACTIVITIES</h3>
-    <div id="event-activities-list">
     <div id="event-social-list"><div style="color:var(--muted);font-size:.8rem;padding:1rem">Loading posts...</div></div>
+    <div id="event-activities-list">
 
     </div>
 <h3 style="font-family:var(--font-head);font-size:1.3rem;margin:2rem 0 1rem">DAILY SOCIAL <em style="color:var(--accent)">ENGAGEMENT</em></h3>
