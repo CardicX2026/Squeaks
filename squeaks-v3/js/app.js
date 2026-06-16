@@ -887,7 +887,6 @@ async function loadEvents() {
       ${e.ends_at ? `<div class="edc-ends">Ends: ${new Date(e.ends_at).toLocaleDateString('en-GB', {day:'numeric',month:'long',year:'numeric'})}</div>` : ''}
     </div>`).join('');
 }
-
 async function openEventDetail(eventId) {
   currentEventId = eventId;
   const el = document.getElementById('event-detail-view');
@@ -898,7 +897,6 @@ async function openEventDetail(eventId) {
 
   const { data: event } = await sb.from('events').select('*').eq('id', eventId).single();
   const { data: activities } = await sb.from('event_activities').select('*').eq('event_id', eventId).eq('is_active', true).order('sort_order');
-  const { data: joined } = currentUser ? await sb.from('event_joins').select('id').eq('user_id', currentUser.id).eq('event_id', eventId).single() : { data: null };
 
   let completions = {};
   if (currentUser) {
@@ -906,32 +904,17 @@ async function openEventDetail(eventId) {
     (comp || []).forEach(c => completions[c.activity_id] = c);
   }
 
-  const isJoined = !!joined;
-
   el.innerHTML = `
     <button class="btn btn-ghost btn-sm" onclick="backToEvents()" style="margin-bottom:1.2rem">← Back to Events</button>
-    <div class="event-detail-header">
-      <div>
-        <div class="edc-status ${event.status}">${event.status === 'live' ? '🔴 Live Now' : event.status === 'upcoming' ? '🟡 Upcoming' : '⚪ Ended'}</div>
-        <h2 style="font-family:var(--font-head);font-size:1.8rem;margin:.3rem 0">${event.title}</h2>
-        <div style="color:var(--accent);font-family:var(--font-head);font-size:1.3rem">Prize Pool: ${event.prize_pool}</div>
-        <p style="color:var(--muted);font-size:.84rem;margin-top:.5rem;line-height:1.65">${event.prize_description}</p>
-      </div>
+    <div style="margin-bottom:1.5rem">
+      <div class="edc-status ${event.status}">${event.status === 'live' ? '🔴 Live Now' : event.status === 'upcoming' ? '🟡 Upcoming' : '⚪ Ended'}</div>
+      <h2 style="font-family:var(--font-head);font-size:1.8rem;margin:.3rem 0">${event.title}</h2>
+      <div style="color:var(--accent);font-family:var(--font-head);font-size:1.3rem">Prize Pool: ${event.prize_pool}</div>
+      <p style="color:var(--muted);font-size:.84rem;margin-top:.5rem;line-height:1.65;max-width:560px">${event.prize_description}</p>
     </div>
-    
-<h3 style="font-family:var(--font-head);font-size:1.3rem;margin:2rem 0 1rem">DAILY SOCIAL <em style="color:var(--accent)">ENGAGEMENT</em></h3>
-    <p style="color:var(--muted);font-size:.82rem;margin-bottom:1rem">Engage with our latest posts. +5 XP per action. Resets daily.</p>
-    <div id="event-social-list"><div style="color:var(--muted);font-size:.8rem;padding:1rem">Loading posts...</div></div>
-    <h3 style="font-family:var(--font-head);font-size:1.3rem;margin:2rem 0 1rem">EVENT LEADERBOARD</h3>
-    <div id="event-leaderboard"></div>
-    <p style="color:var(--muted);font-size:.82rem;margin-bottom:1rem">Engage with our latest posts. Resets daily.</p>
-    <div id="event-social-list"><div style="color:var(--muted);font-size:.8rem;padding:1rem">Loading posts...</div></div>
 
-    <!-- Activities -->
- <h3 style="font-family:var(--font-head);font-size:1.3rem;margin-bottom:1rem">ACTIVITIES</h3>
+    <h3 style="font-family:var(--font-head);font-size:1.3rem;margin-bottom:1rem">ACTIVITIES</h3>
     <div id="event-activities-list">
-
-
       ${(activities || []).map(a => {
         const comp = completions[a.id];
         const isDone = comp && (comp.status === 'approved' || comp.status === 'pending');
@@ -962,11 +945,14 @@ async function openEventDetail(eventId) {
       }).join('')}
     </div>
 
-    <!-- Leaderboard -->
+    <h3 style="font-family:var(--font-head);font-size:1.3rem;margin:2rem 0 1rem">DAILY SOCIAL <em style="color:var(--accent)">ENGAGEMENT</em></h3>
+    <p style="color:var(--muted);font-size:.82rem;margin-bottom:1rem">Engage with our latest posts. +5 XP per action. Resets daily.</p>
+    <div id="event-social-list"><div style="color:var(--muted);font-size:.8rem;padding:1rem">Loading posts...</div></div>
+
     <h3 style="font-family:var(--font-head);font-size:1.3rem;margin:2rem 0 1rem">EVENT LEADERBOARD</h3>
     <div id="event-leaderboard"></div>`;
 
-loadEventLeaderboard(eventId);
+  loadEventLeaderboard(eventId);
   loadEventSocialPosts();
 }
 
