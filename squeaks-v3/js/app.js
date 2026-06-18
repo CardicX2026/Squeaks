@@ -49,6 +49,7 @@ function navigate(id) {
   if (id === 'nft') setTimeout(initFloatingNFTs, 120);
   if (id === 'community') setTimeout(initCountUps, 300);
   if (id === 'cheese-hub') { if (!priceData.length) fetchPrices(); else { renderTicker(); renderMarketCards(); } }
+  history.pushState({ page: id }, '', '/' + id);
 }
 document.querySelectorAll('[data-page]').forEach(el => {
   el.addEventListener('click', e => { e.preventDefault(); navigate(el.dataset.page); });
