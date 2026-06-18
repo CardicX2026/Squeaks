@@ -1081,7 +1081,7 @@ async function loadEventSocialPosts() {
   instagram: { label:'Instagram',             icon:'📷', color:'#e1306c', feed:'https://rss.app/feeds/Mc0KFmfcbDRfpMAk.xml' }
 };
   let html = '';
-  for (const [platform, config] of Object.entries(platforms)) {
+  for (const [platform, config] of Object.entries(SOCIAL_PLATFORMS)) {
     let posts = [];
     try {
       const res = await fetch('https://api.rss2json.com/v1/api.json?rss_url=' + encodeURIComponent(config.feed) + '&api_key=' + RSS2JSON_KEY + '&count=5');
