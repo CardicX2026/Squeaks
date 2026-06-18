@@ -667,11 +667,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   setInterval(fetchPrices, 900000); // 15 minutes
   navigate('home');
   setTimeout(initHomeCountUps, 600);
-  // Handle URL hash routing
-function handleHashRoute() {
-  const hash = window.location.hash.replace('#', '');
-  if (hash) navigate(hash);
-}
+  
 window.addEventListener('hashchange', handleHashRoute);
 handleHashRoute();
   // ══════════════════════════════
@@ -1177,4 +1173,14 @@ function startEngageTimer(platform, idx, link) {
       });
     }
   }, 1000);
+}
+
+window.addEventListener('popstate', function(e) {
+  if (e.state && e.state.page) navigate(e.state.page);
+});
+
+// handle direct URL visits e.g. squeaks.fun/dashboard
+const pathPage = window.location.pathname.replace('/', '').trim();
+if (pathPage && document.getElementById('page-' + pathPage)) {
+  navigate(pathPage);
 }
