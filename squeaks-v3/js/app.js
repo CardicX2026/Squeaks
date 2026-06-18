@@ -1074,11 +1074,12 @@ async function loadEventSocialPosts() {
   const el = document.getElementById('event-social-list');
   if (!el) return;
   const RSS2JSON_KEY = 'xtnj6ril6txyremvpkbfronyx96s8dcrbwwsusos';
-  const platforms = {
-    twitter:   { label:'Twitter / X', icon:'𝕏',  color:'#1da1f2', feed:'https://rss.app/feeds/0HzPY91DiF2sHx93.xml' },
-    tiktok:    { label:'TikTok',      icon:'🎵', color:'#ff0050', feed:'https://rss.app/feeds/saxncBXL5xmGeUIj.xml' },
-    instagram: { label:'Instagram',   icon:'📷', color:'#e1306c', feed:'https://rss.app/feeds/Mc0KFmfcbDRfpMAk.xml' }
-  };
+  const SOCIAL_PLATFORMS = {
+  twitter:   { label:'Squeaks — Twitter / X', icon:'𝕏',  color:'#1da1f2', feed:'https://rss.app/feeds/0HzPY91DiF2sHx93.xml' },
+  cardicx:   { label:'CardicX — Twitter / X', icon:'𝕏',  color:'#1a3a6b', feed:'https://rss.app/feeds/7z7KgyRM6ejA9oBQ.xml' },
+  tiktok:    { label:'TikTok',                icon:'🎵', color:'#ff0050', feed:'https://rss.app/feeds/saxncBXL5xmGeUIj.xml' },
+  instagram: { label:'Instagram',             icon:'📷', color:'#e1306c', feed:'https://rss.app/feeds/Mc0KFmfcbDRfpMAk.xml' }
+};
   let html = '';
   for (const [platform, config] of Object.entries(platforms)) {
     let posts = [];
