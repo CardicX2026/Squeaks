@@ -289,7 +289,8 @@ async function confirmOrder() {
       payment_invoice_id: payment.invoice_id
     }).eq('id', order.id);
 
-    // Clear cart
+     // Save total before clearing cart
+    const orderTotal = parseFloat(cartTotal());
     cart = []; updateCartBadge();
     await awardXP('place_order');
 
@@ -301,7 +302,7 @@ async function confirmOrder() {
         <p style="color:var(--muted);font-size:.84rem;margin-bottom:1.5rem">Complete your payment to confirm your order. We accept SOL, LTC, USDT and USDC.</p>
         <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:1.2rem;margin-bottom:1.5rem">
           <div style="font-size:.72rem;color:var(--muted);font-family:var(--font-mono);margin-bottom:.3rem">ORDER TOTAL</div>
-          <div style="font-family:var(--font-head);font-size:2rem;color:var(--accent)">$${parseFloat(cartTotal() || payment.amount).toFixed(2)} USD</div>
+      <div style="font-family:var(--font-head);font-size:2rem;color:var(--accent)">$${orderTotal.toFixed(2)} USD</div>
         </div>
         <a href="${payment.checkout_url}" target="_blank" class="btn btn-primary btn-lg btn-full" style="margin-bottom:.8rem">
           Pay with Crypto →
