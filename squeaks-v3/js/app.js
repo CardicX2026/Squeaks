@@ -239,14 +239,81 @@ function renderShippingForm() {
     </div>`;
 }
 async function confirmOrder() {
-  const shipping = { name:(document.getElementById('sh-fname')?.value||'')+' '+(document.getElementById('sh-lname')?.value||''), address:document.getElementById('sh-addr')?.value||'', city:document.getElementById('sh-city')?.value||'', zip:document.getElementById('sh-zip')?.value||'', country:document.getElementById('sh-country')?.value||'' };
+  const shipping = {
+    name: (document.getElementById('sh-fname')?.value||'') + ' ' + (document.getElementById('sh-lname')?.value||''),
+    address: document.getElementById('sh-addr')?.value||'',
+    city: document.getElementById('sh-city')?.value||'',
+    zip: document.getElementById('sh-zip')?.value||'',
+    country: document.getElementById('sh-country')?.value||''
+  };
+
+  if (!shipping.name.trim() || !shipping.address || !shipping.city || !shipping.country) {
+    return showToast('⚠️ Fill in all shipping details');
+  }
+
   try {
-    const { error } = await sb.from('orders').insert({ user_id:currentUser.id, items:cart, total:parseFloat(cartTotal()), status:'pending', shipping_address:shipping });
+    showToast('⏳ Creating order...');
+
+    // Save order to Supabase first
+    const { data: order, error } = await sb.from('orders').insert({
+      user_id: currentUser.id,
+      items: cart,
+      total: parseFloat(cartTotal()),
+      status: 'pending',
+      payment_status: 'unpaid',
+      shipping_address: shipping
+    }).select().single();
+
     if (error) throw error;
-    await awardXP('place_order'); cart=[]; updateCartBadge();
-    document.getElementById('checkout-body').innerHTML=`<div style="text-align:center;padding:2rem 0"><div style="font-size:3.5rem;margin-bottom:1rem">🎉</div><h3 style="font-family:var(--font-head);font-size:2rem;margin-bottom:.5rem">ORDER PLACED!</h3><p style="color:var(--muted);font-size:.86rem">Your Squeaks gear is on its way.</p><button class="btn btn-primary btn-lg" style="margin-top:1.5rem" onclick="closeModal('checkout-modal');navigate('dashboard')">View Orders →</button></div>`;
+
+    // Create CoinPayments invoice via Edge Function
+    const res = await fetch('https://jhyaknksgeitcxbewuft.supabase.co/functions/v1/create-payment', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer sb_publishable_A8qb2SHtcII7_yZ9kR3Ycw_fccJmHur`
+      },
+      body: JSON.stringify({
+        amount: parseFloat(cartTotal()),
+        order_id: order.id,
+        buyer_email: currentUser.email,
+        items: cart.map(i => i.name).join(', ')
+      })
+    });
+
+    const payment = await res.json();
+    if (payment.error) throw new Error(payment.error);
+
+    // Save invoice ID to order
+    await sb.from('orders').update({
+      payment_invoice_id: payment.invoice_id
+    }).eq('id', order.id);
+
+    // Clear cart
+    cart = []; updateCartBadge();
+    await awardXP('place_order');
+
+    // Show payment options
+    document.getElementById('checkout-body').innerHTML = `
+      <div style="text-align:center;padding:1.5rem 0">
+        <div style="font-size:2.5rem;margin-bottom:.8rem">🛒</div>
+        <h3 style="font-family:var(--font-head);font-size:1.8rem;margin-bottom:.4rem">ORDER CONFIRMED</h3>
+        <p style="color:var(--muted);font-size:.84rem;margin-bottom:1.5rem">Complete your payment to confirm your order. We accept SOL, LTC, USDT and USDC.</p>
+        <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:1.2rem;margin-bottom:1.5rem">
+          <div style="font-size:.72rem;color:var(--muted);font-family:var(--font-mono);margin-bottom:.3rem">ORDER TOTAL</div>
+          <div style="font-family:var(--font-head);font-size:2rem;color:var(--accent)">$${parseFloat(cartTotal() || payment.amount).toFixed(2)} USD</div>
+        </div>
+        <a href="${payment.checkout_url}" target="_blank" class="btn btn-primary btn-lg btn-full" style="margin-bottom:.8rem">
+          Pay with Crypto →
+        </a>
+        <p style="font-size:.72rem;color:var(--muted)">You will be redirected to CoinPayments secure checkout.<br/>Accepted: SOL · LTC · USDT · USDC</p>
+        <button class="btn btn-ghost btn-sm" style="margin-top:1rem" onclick="closeModal('checkout-modal');navigate('dashboard')">View My Orders</button>
+      </div>`;
+
     loadDashboard();
-  } catch(e) { showToast('❌ '+e.message); }
+  } catch(e) {
+    showToast('❌ ' + e.message);
+  }
 }
 
 // ══════════════════════════════
