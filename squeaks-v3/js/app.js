@@ -281,8 +281,13 @@ async function confirmOrder() {
       })
     });
 
-    const payment = await res.json();
+    const rawText = await res.text();
+    console.log('Raw response:', rawText);
+    if (!rawText) throw new Error('Edge Function returned empty response');
+    let payment;
+    try { payment = JSON.parse(rawText); } catch(e) { throw new Error('Invalid JSON: ' + rawText); }
     if (payment.error) throw new Error(payment.error);
+    console.log('Payment:', payment);
 
     // Save invoice ID to order
     await sb.from('orders').update({
