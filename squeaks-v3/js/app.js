@@ -267,18 +267,23 @@ async function confirmOrder() {
     if (error) throw error;
 
     // Create CoinPayments invoice via Edge Function
+   const payload = JSON.stringify({
+      amount: orderTotal,
+      order_id: order.id,
+      buyer_email: currentUser.email,
+      items: cart.map(i => i.name).join(', ')
+    });
+
+    console.log('Sending payload:', payload);
+
     const res = await fetch('https://jhyaknksgeitcxbewuft.supabase.co/functions/v1/create-payment', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer sb_publishable_A8qb2SHtcII7_yZ9kR3Ycw_fccJmHur`
       },
-      body: JSON.stringify({
-        amount: parseFloat(cartTotal()),
-        order_id: order.id,
-        buyer_email: currentUser.email,
-        items: cart.map(i => i.name).join(', ')
-      })
+      body: payload
+    });
     });
 
     const rawText = await res.text();
