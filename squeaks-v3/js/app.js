@@ -246,32 +246,33 @@ async function confirmOrder() {
     zip: document.getElementById('sh-zip')?.value||'',
     country: document.getElementById('sh-country')?.value||''
   };
-
   if (!shipping.name.trim() || !shipping.address || !shipping.city || !shipping.country) {
     return showToast('⚠️ Fill in all shipping details');
   }
-
   try {
     showToast('⏳ Creating order...');
 
-    // Save order to Supabase first
+    // Save total before anything else
+    const orderTotal = parseFloat(cartTotal());
+    const cartItems = cart.map(i => i.name).join(', ');
+
+    // Save order to Supabase
     const { data: order, error } = await sb.from('orders').insert({
       user_id: currentUser.id,
       items: cart,
-      total: parseFloat(cartTotal()),
+      total: orderTotal,
       status: 'pending',
       payment_status: 'unpaid',
       shipping_address: shipping
     }).select().single();
-
     if (error) throw error;
 
-    // Create CoinPayments invoice via Edge Function
-   const payload = JSON.stringify({
+    // Create CoinPayments invoice
+    const payload = JSON.stringify({
       amount: orderTotal,
       order_id: order.id,
       buyer_email: currentUser.email,
-      items: cart.map(i => i.name).join(', ')
+      items: cartItems
     });
 
     console.log('Sending payload:', payload);
@@ -284,27 +285,24 @@ async function confirmOrder() {
       },
       body: payload
     });
-    });
 
     const rawText = await res.text();
     console.log('Raw response:', rawText);
     if (!rawText) throw new Error('Edge Function returned empty response');
+
     let payment;
     try { payment = JSON.parse(rawText); } catch(e) { throw new Error('Invalid JSON: ' + rawText); }
     if (payment.error) throw new Error(payment.error);
     console.log('Payment:', payment);
 
     // Save invoice ID to order
-    await sb.from('orders').update({
-      payment_invoice_id: payment.invoice_id
-    }).eq('id', order.id);
+    await sb.from('orders').update({ payment_invoice_id: payment.invoice_id }).eq('id', order.id);
 
-     // Save total before clearing cart
-    const orderTotal = parseFloat(cartTotal());
+    // Clear cart and award XP
     cart = []; updateCartBadge();
     await awardXP('place_order');
 
-    // Show payment options
+    // Show payment screen
     document.getElementById('checkout-body').innerHTML = `
       <div style="text-align:center;padding:1.5rem 0">
         <div style="font-size:2.5rem;margin-bottom:.8rem">🛒</div>
@@ -312,12 +310,10 @@ async function confirmOrder() {
         <p style="color:var(--muted);font-size:.84rem;margin-bottom:1.5rem">Complete your payment to confirm your order. We accept SOL, LTC, USDT and USDC.</p>
         <div style="background:var(--surface2);border:1px solid var(--border);border-radius:12px;padding:1.2rem;margin-bottom:1.5rem">
           <div style="font-size:.72rem;color:var(--muted);font-family:var(--font-mono);margin-bottom:.3rem">ORDER TOTAL</div>
-      <div style="font-family:var(--font-head);font-size:2rem;color:var(--accent)">$${orderTotal.toFixed(2)} USD</div>
+          <div style="font-family:var(--font-head);font-size:2rem;color:var(--accent)">$${orderTotal.toFixed(2)} USD</div>
         </div>
-        <a href="${payment.checkout_url}" target="_blank" class="btn btn-primary btn-lg btn-full" style="margin-bottom:.8rem">
-          Pay with Crypto →
-        </a>
-        <p style="font-size:.72rem;color:var(--muted)">You will be redirected to CoinPayments secure checkout.<br/>Accepted: SOL · LTC · USDT · USDC</p>
+        <a href="${payment.checkout_url}" target="_blank" class="btn btn-primary btn-lg btn-full" style="margin-bottom:.8rem">Pay with Crypto →</a>
+        <p style="font-size:.72rem;color:var(--muted)">Redirected to CoinPayments secure checkout.<br/>Accepted: SOL · LTC · USDT · USDC</p>
         <button class="btn btn-ghost btn-sm" style="margin-top:1rem" onclick="closeModal('checkout-modal');navigate('dashboard')">View My Orders</button>
       </div>`;
 
@@ -326,7 +322,6 @@ async function confirmOrder() {
     showToast('❌ ' + e.message);
   }
 }
-
 // ══════════════════════════════
 // PRODUCTS
 // ══════════════════════════════
