@@ -43,6 +43,30 @@ function navigate(id) {
     document.querySelectorAll(`[data-page="${id}"]`).forEach(a => a.classList.add('active'));
     window.scrollTo(0, 0);
   }
+
+  const ROUTE_MAP = {
+  'lab-hub': 'cheese-hub',
+  'fun': 'home',
+  'cheese-hub': 'cheese-hub',
+  'home': 'home',
+  'token': 'token',
+  'nft': 'nft',
+  'games': 'games',
+  'merch': 'merch',
+  'community': 'community',
+  'dashboard': 'dashboard',
+  'auth': 'auth',
+  'staking': 'staking',
+  'dao': 'dao',
+  'shipping': 'shipping',
+  'privacy': 'privacy',
+  'terms': 'terms',
+};
+
+const URL_MAP = {
+  'cheese-hub': 'lab-hub',
+  'home': 'fun',
+};
   closeMobileMenu();
   const fab = document.getElementById('cart-fab');
   if (fab) fab.style.display = id === 'merch' ? 'flex' : 'none';
