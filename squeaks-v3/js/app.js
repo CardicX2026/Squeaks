@@ -783,8 +783,7 @@ document.addEventListener('DOMContentLoaded',()=>{
   }
 });
   
-window.addEventListener('hashchange', handleHashRoute);
-handleHashRoute();
+
   // ══════════════════════════════
 // EVENTS SYSTEM
 // ══════════════════════════════
