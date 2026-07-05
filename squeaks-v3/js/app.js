@@ -764,23 +764,8 @@ document.addEventListener('DOMContentLoaded',()=>{
   renderProducts(); renderProposals(); renderDonut();
   fetchPrices(); initNFTMarquee(); initProductSlider();
   setInterval(fetchPrices, 900000);
+  navigate('home');
   setTimeout(initHomeCountUps, 600);
-
-  // Handle direct URL visits
-  const pathParts = window.location.pathname.split('/').filter(Boolean);
-  if (pathParts.length === 0) {
-    navigate('home');
-  } else if (pathParts[0] === 'dashboard') {
-    navigate('dashboard');
-    if (pathParts[1]) handleDashNav(pathParts[1]);
-  } else {
-    const pageId = ROUTE_MAP[pathParts[0]] || pathParts[0];
-    if (document.getElementById('page-' + pageId)) {
-      navigate(pageId);
-    } else {
-      navigate('home');
-    }
-  }
 });
   
 window.addEventListener('hashchange', handleHashRoute);
