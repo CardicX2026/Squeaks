@@ -763,15 +763,12 @@ document.addEventListener('DOMContentLoaded',()=>{
   initTheme(); initAuth();
   renderProducts(); renderProposals(); renderDonut();
   fetchPrices(); initNFTMarquee(); initProductSlider();
-  setInterval(fetchPrices, 900000);
+  setInterval(fetchPrices, 900000); // 15 minutes
   navigate('home');
   setTimeout(initHomeCountUps, 600);
-});
 
 window.addEventListener('hashchange', handleHashRoute);
 handleHashRoute();
-  }
-});
   
   // ══════════════════════════════
 // EVENTS SYSTEM
