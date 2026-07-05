@@ -1279,17 +1279,20 @@ window.addEventListener('popstate', function(e) {
 });
 
 // handle direct URL visits e.g. squeaks.fun/dashboard
-const pathParts = window.location.pathname.split('/').filter(Boolean);
-if (pathParts.length === 0) {
-  navigate('home');
-} else if (pathParts[0] === 'dashboard') {
-  navigate('dashboard');
-  if (pathParts[1]) handleDashNav(pathParts[1]);
-} else {
-  const pageId = ROUTE_MAP[pathParts[0]] || pathParts[0];
-  if (document.getElementById('page-' + pageId)) {
-    navigate(pageId);
-  } else {
+// Handle direct URL visits — runs after DOM is ready
+document.addEventListener('DOMContentLoaded', function() {
+  const pathParts = window.location.pathname.split('/').filter(Boolean);
+  if (pathParts.length === 0) {
     navigate('home');
+  } else if (pathParts[0] === 'dashboard') {
+    navigate('dashboard');
+    if (pathParts[1]) handleDashNav(pathParts[1]);
+  } else {
+    const pageId = ROUTE_MAP[pathParts[0]] || pathParts[0];
+    if (document.getElementById('page-' + pageId)) {
+      navigate(pageId);
+    } else {
+      navigate('home');
+    }
   }
-}
+});
