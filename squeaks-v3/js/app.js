@@ -65,7 +65,7 @@ function navigate(id) {
 
 const URL_MAP = {
   'cheese-hub': 'lab-hub',
-  'home': 'fun',
+  'home': 'home',
 };
   closeMobileMenu();
   const fab = document.getElementById('cart-fab');
