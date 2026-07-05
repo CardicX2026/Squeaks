@@ -73,7 +73,8 @@ const URL_MAP = {
   if (id === 'nft') setTimeout(initFloatingNFTs, 120);
   if (id === 'community') setTimeout(initCountUps, 300);
   if (id === 'lab-hub') { if (!priceData.length) fetchPrices(); else { renderTicker(); renderMarketCards(); } }
-  history.pushState({ page: id }, '', '/' + id);
+  const urlSlug = URL_MAP[id] || id;
+history.pushState({ page: id }, '', '/' + urlSlug);
 }
 document.querySelectorAll('[data-page]').forEach(el => {
   el.addEventListener('click', e => { e.preventDefault(); navigate(el.dataset.page); });
@@ -1278,7 +1279,17 @@ window.addEventListener('popstate', function(e) {
 });
 
 // handle direct URL visits e.g. squeaks.fun/dashboard
-const pathPage = window.location.pathname.replace('/', '').trim();
-if (pathPage && document.getElementById('page-' + pathPage)) {
-  navigate(pathPage);
+const pathParts = window.location.pathname.split('/').filter(Boolean);
+if (pathParts.length === 0) {
+  navigate('home');
+} else if (pathParts[0] === 'dashboard') {
+  navigate('dashboard');
+  if (pathParts[1]) handleDashNav(pathParts[1]);
+} else {
+  const pageId = ROUTE_MAP[pathParts[0]] || pathParts[0];
+  if (document.getElementById('page-' + pageId)) {
+    navigate(pageId);
+  } else {
+    navigate('home');
+  }
 }
