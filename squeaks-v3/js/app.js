@@ -72,7 +72,7 @@ const URL_MAP = {
   if (fab) fab.style.display = id === 'merch' ? 'flex' : 'none';
   if (id === 'nft') setTimeout(initFloatingNFTs, 120);
   if (id === 'community') setTimeout(initCountUps, 300);
-  if (id === 'cheese-hub') { if (!priceData.length) fetchPrices(); else { renderTicker(); renderMarketCards(); } }
+  if (id === 'lab-hub') { if (!priceData.length) fetchPrices(); else { renderTicker(); renderMarketCards(); } }
   const urlSlug = URL_MAP[id] || id;
 history.pushState({ page: id }, '', '/' + urlSlug);
 }
