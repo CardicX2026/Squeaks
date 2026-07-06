@@ -576,14 +576,14 @@ function genSparkline(trend) {
 // ══════════════════════════════
 // DAO
 // ══════════════════════════════
-const VOTING_PROPOSALS=[
+const DAO_PROPOSALS=[
   {id:1,title:'CDXLIV NFT Collection Size: 444 vs 888',desc:'Community vote to decide the total supply of the CDXLIV NFT collection. 444 won.',opt_a:'444 NFTs',opt_b:'888 NFTs',votes_a:22,votes_b:10},
   {id:2,title:'XP Allocation — CX Event Participation',desc:'Approve awarding 150 XP for joining live CardicX events through the Squeaks dashboard.',opt_a:'Approve 150 XP',opt_b:'Reduce to 75 XP',votes_a:22,votes_b:10},
   {id:3,title:'XP Allocation — Daily Login Rewards',desc:'Approve 10 XP daily login reward to incentivize consistent platform engagement.',opt_a:'Approve 10 XP/day',opt_b:'No daily reward',votes_a:22,votes_b:10},
 ];
 function renderProposals() {
   const el=document.getElementById('proposals-list'); if(!el) return;
-  el.innerHTML=VOTING_PROPOSALS.map(p=>{
+  el.innerHTML=DAO_PROPOSALS.map(p=>{
     const total=p.votes_a+p.votes_b,pct=((p.votes_a/total)*100).toFixed(0);
     return `<div class="proposal-card"><span class="p-status p-passed">✅ Passed</span><div class="proposal-title">${p.title}</div><div class="proposal-desc">${p.desc}</div><div class="vote-bar-wrap"><div class="vote-bar-fill" style="width:${pct}%"></div></div><div class="vote-meta"><span class="vote-winner">✅ ${p.opt_a} — ${p.votes_a} votes (${pct}%)</span><span>❌ ${p.opt_b} — ${p.votes_b} votes</span></div><div style="font-size:.66rem;color:var(--muted);font-family:var(--font-mono);margin-top:.5rem">${total} total votes</div></div>`;
   }).join('');
