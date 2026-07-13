@@ -45,7 +45,36 @@ function navigate(id) {
   }
 
  
+const ROUTE_MAP = {
+  'lab-hub': 'cheese-hub',
+  'fun': 'home',
+  'shop': 'merch',
+  'cheese-hub': 'cheese-hub',
+  'home': 'home',
+  'token': 'token',
+  'nft': 'nft',
+  'nfts': 'nft',
+  'games': 'games',
+  'gaming': 'games',
+  'merch': 'merch',
+  'community': 'community',
+  'dashboard': 'dashboard',
+  'auth': 'auth',
+  'login': 'auth',
+  'signup': 'auth',
+  'staking': 'staking',
+  'dao': 'dao',
+  'governance': 'dao',
+  'shipping': 'shipping',
+  'privacy': 'privacy',
+  'terms': 'terms',
+};
 
+const URL_MAP = {
+  'lab-hub': 'lab-hub',
+  'fun': 'fun',
+  'shop': 'shop',
+};
 
   closeMobileMenu();
   const fab = document.getElementById('cart-fab');
