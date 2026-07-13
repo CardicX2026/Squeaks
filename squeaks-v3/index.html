@@ -3,7 +3,7 @@
 <head>
 <link rel="icon" type="image/png" href="images/favicon.png"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
 <title>SQUEAKS — Community. Fun Culture.</title>
-<meta name="description" content="Squeaks is powering CardicX. Fun, NFTs, merch, rewards and more."/>
+<meta name="description" content="Squeaks is powering CardicX. Fun, NFTs, Shop, rewards and more."/>
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
 <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;500;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet"/><link rel="stylesheet" href="css/style.css"/>
@@ -22,7 +22,7 @@
     <li><a data-page="token">Token</a></li>
     <li><a data-page="nft">NFTs</a></li>
     <li><a data-page="fun">fun</a></li>
-    <li><a data-page="merch">Shop</a></li>
+    <li><a data-page="shop">Shop</a></li>
     <li><a data-page="community">Community</a></li>
     <li><a data-page="lab-hub">Lab Hub</a></li>
     <li><a href="https://squeaksfun.gitbook.io/squeaks" target="_blank">Docs ↗</a></li>
@@ -43,7 +43,7 @@
     <li><a onclick="navigate('token')">Token</a></li>
     <li><a onclick="navigate('nft')">NFTs</a></li>
     <li><a onclick="navigate('fun')">fun</a></li>
-    <li><a onclick="navigate('merch')">Shop</a></li>
+    <li><a onclick="navigate('shop')">Shop</a></li>
     <li><a onclick="navigate('community')">Community</a></li>
     <li><a onclick="navigate('lab-hub')">lab Hub</a></li>
     <li><a href="https://squeaksfun.gitbook.io/squeaks" target="_blank">Docs ↗</a></li>
@@ -72,7 +72,7 @@
     <div class="block block-anim-1" onclick="navigate('token')">
       <div class="block-num">01 — TOKEN</div>
       <div class="block-title">$SQKS<br><em>TOKEN</em></div>
-      <p class="block-desc">The fuel powering the Squeaks ecosystem. Stake, vote, earn rewards and unlock perks across Fun &, NFTs and merch.</p>
+      <p class="block-desc">The fuel powering the Squeaks ecosystem. Stake, vote, earn rewards and unlock perks across Fun &, NFTs and Shop</p>
       <div class="fake-chart" id="fake-chart-token"></div>
       <div class="btn-group">
         <button class="btn btn-primary btn-sm" onclick="event.stopPropagation();navigate('token')">View Token</button>
@@ -113,7 +113,7 @@
     </div>
 
     <!-- SHOP BLOCK -->
-    <div class="block block-anim-1" onclick="navigate('merch')">
+    <div class="block block-anim-1" onclick="navigate('shop')">
       <div class="block-num">04 — SQUEAKS SHOP</div>
       <div class="block-title">SQUEAKS<br><em>SHOP</em></div>
       <p class="block-desc">Premium streetwear for true believers. Hoodies, tees, bucket hats. Shipped worldwide.</p>
@@ -369,7 +369,7 @@
 </div>
 
 <!-- ═══ SHOP ═══ -->
-<div id="page-merch" class="page">
+<div id="page-shop" class="page">
   <div style="text-align:center;padding:3rem 2rem 1.5rem" class="grid-bg">
     <div style="font-family:var(--font-mono);font-size:.62rem;letter-spacing:3px;color:var(--accent);text-transform:uppercase;margin-bottom:.5rem">Official Gear</div>
     <h1 style="font-family:var(--font-head);font-size:clamp(2.5rem,7vw,5rem)">SQUEAKS <em style="color:var(--accent)">SHOP</em></h1>
@@ -474,7 +474,7 @@
     <!-- Products -->
     <h3 style="font-family:var(--font-head);font-size:1.4rem;margin-bottom:1rem">SQUEAKS <em style="color:var(--accent)">PRODUCTS</em></h3>
     <div class="grid-3">
-      <div class="card card-pad"><div style="font-family:var(--font-head);font-size:1.2rem;margin-bottom:.3rem">SQUEAKS SHOP</div><div style="font-size:.76rem;color:var(--muted);margin-bottom:.8rem">3 products live. Worldwide shipping via our Connected Partners</div><button class="btn btn-primary btn-sm" onclick="navigate('merch')">Visit Shop →</button></div>
+      <div class="card card-pad"><div style="font-family:var(--font-head);font-size:1.2rem;margin-bottom:.3rem">SQUEAKS SHOP</div><div style="font-size:.76rem;color:var(--muted);margin-bottom:.8rem">3 products live. Worldwide shipping via our Connected Partners</div><button class="btn btn-primary btn-sm" onclick="navigate('shop')">Visit Shop →</button></div>
       <div class="card card-pad"><div style="font-family:var(--font-head);font-size:1.2rem;margin-bottom:.3rem">CDXLIV NFTS</div><div style="font-size:.76rem;color:var(--muted);margin-bottom:.8rem">444 unique NFTs. Minting coming soon.</div><button class="btn btn-outline btn-sm" onclick="navigate('nft')">View NFTs →</button></div>
       <div class="card card-pad"><div style="font-family:var(--font-head);font-size:1.2rem;margin-bottom:.3rem">GAMING HUB</div><div style="font-size:.76rem;color:var(--muted);margin-bottom:.8rem">2 games in development by Trencies Games.</div><button class="btn btn-outline btn-sm" onclick="navigate('games')">View Games →</button></div>
       <div class="card card-pad" style="border-style:dashed"><div style="font-family:var(--font-head);font-size:1.2rem;margin-bottom:.3rem">$SQKS TOKEN</div><div style="font-size:.76rem;color:var(--muted);margin-bottom:.8rem">Token presale coming soon.</div><button class="btn btn-outline btn-sm" onclick="navigate('token')">Learn More →</button></div>
@@ -550,7 +550,7 @@
           <div class="card card-pad">
             <h3 style="font-family:var(--font-head);font-size:1.2rem;margin-bottom:1rem">QUICK ACTIONS</h3>
             <div style="display:flex;flex-direction:column;gap:.6rem">
-              <button class="btn btn-primary" onclick="navigate('merch')">Shop Merch</button>
+              <button class="btn btn-primary" onclick="navigate('shop')">Shop Now</button>
               <button class="btn btn-outline" onclick="navigate('nft')">Browse NFTs</button>
               <button class="btn btn-outline" onclick="navigate('community')">Community Events</button>
               <button class="btn btn-outline" onclick="navigate('memeECO')">Voting Proposals</button>
@@ -674,7 +674,7 @@
 </div>
 
 <!-- ═══ LEGAL ═══ -->
-<div id="page-shipping" class="page"><div class="legal-content"><h1>SHIPPING <em>POLICY</em></h1><div class="last-updated">Last updated: June 2026</div><h2>Fulfilment Partner</h2><p>Squeks has a well trusted partner globally.</p><h2>Proccesing Time</h2><p>Most orders are processed within 2–5 business days.</p><h2>Shipping Times</h2><ul><li><strong>United States:</strong> 3–7 business days</li><li><strong>Europe:</strong> 5–10 business days</li><li><strong>Asia:</strong> 7–14 business days</li><li><strong>South Africa &amp; Rest of Africa:</strong> 10–21 business days</li><li><strong>Rest of World:</strong> 10–30 business days</li></ul><h2>Tracking</h2><p>Once your order ships you will receive a tracking number via email and can view status in your dashboard.</p><h2>International Orders</h2><p>International orders may be subject to customs duties imposed by the destination country. These charges are the responsibility of the recipient.</p><h2>Lost or Damaged Orders</h2><p>Contact us via Telegram at @squeaks_official or via email admin@squeaks.fun with your order number and photos. We will work delightly to resolve the issue promptly.</p><div style="margin-top:2rem"><button class="btn btn-primary" onclick="navigate('merch')">← Back to Shop</button></div></div></div>
+<div id="page-shipping" class="page"><div class="legal-content"><h1>SHIPPING <em>POLICY</em></h1><div class="last-updated">Last updated: June 2026</div><h2>Fulfilment Partner</h2><p>Squeks has a well trusted partner globally.</p><h2>Proccesing Time</h2><p>Most orders are processed within 2–5 business days.</p><h2>Shipping Times</h2><ul><li><strong>United States:</strong> 3–7 business days</li><li><strong>Europe:</strong> 5–10 business days</li><li><strong>Asia:</strong> 7–14 business days</li><li><strong>South Africa &amp; Rest of Africa:</strong> 10–21 business days</li><li><strong>Rest of World:</strong> 10–30 business days</li></ul><h2>Tracking</h2><p>Once your order ships you will receive a tracking number via email and can view status in your dashboard.</p><h2>International Orders</h2><p>International orders may be subject to customs duties imposed by the destination country. These charges are the responsibility of the recipient.</p><h2>Lost or Damaged Orders</h2><p>Contact us via Telegram at @squeaks_official or via email admin@squeaks.fun with your order number and photos. We will work delightly to resolve the issue promptly.</p><div style="margin-top:2rem"><button class="btn btn-primary" onclick="navigate('shop')">← Back to Shop</button></div></div></div>
 <div id="page-privacy" class="page"><div class="legal-content"><h1>PRIVACY <em>POLICY</em></h1><div class="last-updated">Last updated: June 2026</div><h2>Information We Collect</h2><p>We collect information you provide when creating an account (email, username), placing orders (shipping address), and using our platform (activity, XP transactions).</p><h2>How We Use It</h2><ul><li>To process and fulfill orders</li><li>To manage your account and XP rewards</li><li>To send order confirmations and updates</li><li>To improve our platform</li></ul><h2>Data Storage</h2><p>Data is securely stored using Supabase, a GDPR-compliant database service. We do not sell your personal data.</p><h2>Your Rights</h2><p>You may request deletion of your account and data at any time via Telegram: @squeaks_official.</p><div style="margin-top:2rem"><button class="btn btn-primary" onclick="navigate('home')">← Back to Home</button></div></div></div>
 <div id="page-terms" class="page"><div class="legal-content"><h1>TERMS OF <em>SERVICE</em></h1><div class="last-updated">Last updated: June 2026</div><h2>Acceptance</h2><p>By using the Squeaks platform, you agree to these Terms of Service.</p><h2>Accounts</h2><p>You must be 18+ to create an account and make purchases.</p><h2>Purchases</h2><p>All sales are final unless the item arrives damaged. Refund requests within 14 days of delivery via Telegram.</p><h2>XP &amp; Rewards</h2><p>XP and level rewards have no monetary value unless explicitly stated. We reserve the right to modify the XP system.</p><h2>NFTs &amp; Tokens</h2><p>Cryptocurrency investments carry significant risk. Nothing on this platform constitutes financial advice. DYOR.</p><h2>Contact</h2><p>Questions: Telegram @squeaks_official</p><div style="margin-top:2rem"><button class="btn btn-primary" onclick="navigate('home')">← Back to Home</button></div></div></div>
 
