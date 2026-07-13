@@ -63,10 +63,7 @@ function navigate(id) {
   'terms': 'terms',
 };
 
-const URL_MAP = {
-  'cheese-hub': 'lab-hub',
-  'home': 'home',
-};
+
   closeMobileMenu();
   const fab = document.getElementById('cart-fab');
   if (fab) fab.style.display = id === 'shop' ? 'flex' : 'none';
