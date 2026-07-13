@@ -52,7 +52,7 @@ function navigate(id) {
   'token': 'token',
   'nft': 'nft',
   'games': 'games',
-  'merch': 'merch',
+  'shop': 'shop',
   'community': 'community',
   'dashboard': 'dashboard',
   'auth': 'auth',
@@ -69,7 +69,7 @@ const URL_MAP = {
 };
   closeMobileMenu();
   const fab = document.getElementById('cart-fab');
-  if (fab) fab.style.display = id === 'merch' ? 'flex' : 'none';
+  if (fab) fab.style.display = id === 'shop' ? 'flex' : 'none';
   if (id === 'nft') setTimeout(initFloatingNFTs, 120);
   if (id === 'community') setTimeout(initCountUps, 300);
   if (id === 'lab-hub') { if (!priceData.length) fetchPrices(); else { renderTicker(); renderMarketCards(); } }
@@ -184,7 +184,7 @@ const LEVELS = [
   {level:5,name:'Diamond Degen',min:6000,max:12999},{level:6,name:'Golden Degen',min:13000,max:27999},
   {level:7,name:'Certified Degen',min:28000,max:Infinity}
 ];
-const LEVEL_PERKS = { 1:[],2:['5% merch discount'],3:['10% merch discount','NFT whitelist'],4:['15% merch discount','Exclusive game modes'],5:['20% merch discount','Monthly $SQKS airdrop'],6:['25% merch discount','Early access'],7:['30% merch discount','Certified Degen badge','Direct team access'] };
+const LEVEL_PERKS = { 1:[],2:['5% Shopping discount'],3:['10% Shopping discount','NFT whitelist'],4:['15% Shopping discount','Exclusive game modes'],5:['20% Shopping discount','Monthly $SQKS airdrop'],6:['25% Shopping discount','Early access'],7:['30% Shopping discount','Certified Degen badge','Direct team access'] };
 function getLevel(xp) { return LEVELS.slice().reverse().find(l => xp >= l.min) || LEVELS[0]; }
 
 async function awardXP(action, metadata={}) {
@@ -698,7 +698,7 @@ async function loadOrders() {
   const cEl=document.getElementById('stat-orders'); const sEl=document.getElementById('stat-spend');
   if(cEl) cEl.textContent=orders.length;
   if(sEl) sEl.textContent='$'+orders.reduce((s,o)=>s+parseFloat(o.total),0).toFixed(2);
-  if(!orders.length){el.innerHTML=`<div style="color:var(--muted);text-align:center;padding:2rem">No orders yet. <a href="#" onclick="navigate('merch');return false;" style="color:var(--accent)">Shop now →</a></div>`;return;}
+  if(!orders.length){el.innerHTML=`<div style="color:var(--muted);text-align:center;padding:2rem">No orders yet. <a href="#" onclick="navigate('shop');return false;" style="color:var(--accent)">Shop now →</a></div>`;return;}
   el.innerHTML=orders.map(o=>`<div class="order-row"><div class="order-id">#${o.id.slice(0,8).toUpperCase()}</div><div class="order-items">${Array.isArray(o.items)?o.items.map(i=>i.name).join(', '):'Order'}</div><div class="order-total">$${parseFloat(o.total).toFixed(2)}</div><div class="order-status os-${o.status}">${o.status}</div></div>`).join('');
 }
 async function loadXPHistory() {
