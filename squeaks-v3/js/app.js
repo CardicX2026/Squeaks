@@ -78,16 +78,31 @@ const URL_MAP = {
 
   closeMobileMenu();
   const fab = document.getElementById('cart-fab');
-  if (fab) fab.style.display = id === 'shop' ? 'flex' : 'none';
-  if (id === 'nft') setTimeout(initFloatingNFTs, 120);
+if (fab) fab.style.display = id === 'shop' ? 'flex' : 'none';
+if (id === 'nft') {
+  setTimeout(initFloatingNFTs, 120);
+  setTimeout(() => window.SqueaksMint?.refreshSupply?.(), 250);
+}
   if (id === 'community') setTimeout(initCountUps, 300);
   if (id === 'lab-hub') { if (!priceData.length) fetchPrices(); else { renderTicker(); renderMarketCards(); } }
   const urlSlug = URL_MAP[id] || id;
-history.pushState({ page: id }, '', '/' + urlSlug);
+  const targetUrl = id === 'home' ? '/' : '/#' + urlSlug;
+  history.pushState({ page: id }, '', targetUrl);
 }
 document.querySelectorAll('[data-page]').forEach(el => {
   el.addEventListener('click', e => { e.preventDefault(); navigate(el.dataset.page); });
 });
+function getRouteFromLocation() {
+  const params = new URLSearchParams(window.location.search);
+  const queryRoute = params.get('route');
+  if (queryRoute && document.getElementById('page-' + queryRoute)) return queryRoute;
+  const hashRoute = window.location.hash.replace('#', '');
+  if (hashRoute && document.getElementById('page-' + hashRoute)) return hashRoute;
+  const path = window.location.pathname.replace(/^\//, '').replace(/\/$/, '');
+  if (!path || path === 'index.html') return 'home';
+  if (document.getElementById('page-' + path)) return path;
+  return 'home';
+}
 function toggleMobileMenu() { document.getElementById('mobile-menu').classList.toggle('open'); }
 function closeMobileMenu() { document.getElementById('mobile-menu')?.classList.remove('open'); }
 
@@ -788,9 +803,13 @@ document.addEventListener('DOMContentLoaded',()=>{
   renderProducts(); renderProposals(); renderDonut();
   fetchPrices(); initNFTMarquee(); initProductSlider();
   setInterval(fetchPrices, 900000); // 15 minutes
-  navigate('home');
+  navigate(getRouteFromLocation());
   setTimeout(initHomeCountUps, 600);
 
+function handleHashRoute() {
+  const route = getRouteFromLocation();
+  navigate(route);
+}
 window.addEventListener('hashchange', handleHashRoute);
 handleHashRoute();
   
