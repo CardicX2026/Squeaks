@@ -44,24 +44,7 @@ function navigate(id) {
     window.scrollTo(0, 0);
   }
 
-  const ROUTE_MAP = {
-  'lab-hub': 'cheese-hub',
-  'fun': 'home',
-  'cheese-hub': 'cheese-hub',
-  'home': 'home',
-  'token': 'token',
-  'nft': 'nft',
-  'games': 'games',
-  'shop': 'shop',
-  'community': 'community',
-  'dashboard': 'dashboard',
-  'auth': 'auth',
-  'staking': 'staking',
-  'dao': 'dao',
-  'shipping': 'shipping',
-  'privacy': 'privacy',
-  'terms': 'terms',
-};
+ 
 
 
   closeMobileMenu();
