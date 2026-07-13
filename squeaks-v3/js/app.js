@@ -145,9 +145,24 @@ async function signUp() {
   const email = document.getElementById('su-email')?.value?.trim();
   const password = document.getElementById('su-password')?.value;
   if (!username || !email || !password) return showToast('⚠️ Fill all fields');
-  const { error } = await sb.auth.signUp({ email, password, options: { data: { username } } });
-  if (error) showToast('❌ ' + error.message);
-  else showToast('✅ Account created! Check your email.');
+  
+  console.log('Signing up:', { username, email });
+  
+  const { data, error } = await sb.auth.signUp({ 
+    email, 
+    password, 
+    options: { data: { username } } 
+  });
+  
+  console.log('Signup result:', JSON.stringify({ data, error }));
+  
+  if (error) {
+    showToast('❌ ' + (error.message || error.msg || error.code || JSON.stringify(error)));
+  } else if (data?.user?.identities?.length === 0) {
+    showToast('⚠️ Email already registered. Try logging in.');
+  } else {
+    showToast('✅ Account created! Check your email to confirm.');
+  }
 }
 async function logIn() {
   const email = document.getElementById('li-email')?.value?.trim();
