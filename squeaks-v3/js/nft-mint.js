@@ -40,6 +40,103 @@
     };
   }
 
+  // ---- Launch countdown logic (inserted) ----
+  const LAUNCH_TS = Date.UTC(2026, 6, 25, 0, 0, 0); // July 25, 2026 00:00:00 UTC
+
+  function el(id) { return document.getElementById(id); }
+
+  function revealMintUI() {
+    const cd = document.getElementById('mint-countdown');
+    const mp = document.querySelector('.mint-panel');
+    const els = getElements();
+    if (cd) {
+      cd.classList.add('hidden');
+      cd.setAttribute('aria-hidden','true');
+    }
+    if (mp) {
+      mp.classList.remove('hidden');
+      mp.setAttribute('aria-hidden','false');
+      mp.style.transition = 'opacity .6s, transform .6s';
+      mp.style.opacity = 1;
+      mp.style.transform = 'translateY(0)';
+    }
+    if (els.actionBtn) {
+      els.actionBtn.disabled = false;
+      els.actionBtn.classList.remove('mint-action-disabled');
+      els.actionBtn.setAttribute('aria-hidden','false');
+    }
+    // Reveal footer links if present
+    const footerLinks = document.getElementById('mint-footer-links');
+    if (footerLinks) {
+      footerLinks.classList.remove('hidden');
+      footerLinks.setAttribute('aria-hidden','false');
+    }
+    try { refreshSupply(); } catch (e) { }
+  }
+
+  function showLaunchLiveThenReveal() {
+    const cdInner = document.querySelector('#mint-countdown .lc-inner');
+    if (!cdInner) { revealMintUI(); return; }
+    const liveEl = document.createElement('div');
+    liveEl.className = 'launch-live show';
+    liveEl.textContent = '🚀 SQUEAKS GENESIS IS LIVE';
+    cdInner.style.display = 'flex';
+    cdInner.style.alignItems = 'center';
+    cdInner.style.justifyContent = 'center';
+    cdInner.innerHTML = '';
+    cdInner.appendChild(liveEl);
+    setTimeout(() => { revealMintUI(); }, 2000);
+  }
+
+  function initLaunchCountdown() {
+    const cd = document.getElementById('mint-countdown');
+    const mp = document.querySelector('.mint-panel');
+    const els = getElements();
+    if (!cd || !mp || !els.actionBtn) return;
+
+    const now = Date.now();
+    if (now >= LAUNCH_TS) {
+      cd.classList.add('hidden'); cd.setAttribute('aria-hidden','true');
+      mp.classList.remove('hidden'); mp.setAttribute('aria-hidden','false');
+      els.actionBtn.disabled = false; els.actionBtn.classList.remove('mint-action-disabled');
+      const footerLinks = document.getElementById('mint-footer-links'); if (footerLinks) footerLinks.classList.remove('hidden');
+      return;
+    }
+
+    mp.classList.add('hidden'); mp.setAttribute('aria-hidden','true');
+    cd.classList.remove('hidden'); cd.setAttribute('aria-hidden','false');
+    els.actionBtn.disabled = true; els.actionBtn.classList.add('mint-action-disabled'); els.actionBtn.setAttribute('aria-hidden','true');
+
+    // Hide the footer links until reveal
+    const footerLinks = document.getElementById('mint-footer-links'); if (footerLinks) { footerLinks.classList.add('hidden'); footerLinks.setAttribute('aria-hidden','true'); }
+
+    const daysEl = el('lc-days'); const hoursEl = el('lc-hours'); const minsEl = el('lc-minutes'); const secsEl = el('lc-seconds');
+    let tickInterval = null;
+
+    function updateTick() {
+      const now = Date.now(); const diff = LAUNCH_TS - now;
+      if (diff <= 0) { clearInterval(tickInterval); showLaunchLiveThenReveal(); return; }
+      const totalSec = Math.floor(diff / 1000);
+      const days = Math.floor(totalSec / 86400);
+      const hours = Math.floor((totalSec % 86400) / 3600);
+      const minutes = Math.floor((totalSec % 3600) / 60);
+      const seconds = totalSec % 60;
+      if (daysEl) daysEl.textContent = String(days).padStart(2,'0');
+      if (hoursEl) hoursEl.textContent = String(hours).padStart(2,'0');
+      if (minsEl) minsEl.textContent = String(minutes).padStart(2,'0');
+      if (secsEl) secsEl.textContent = String(seconds).padStart(2,'0');
+      if (totalSec <= 10) {
+        cd.classList.add('final-seconds');
+        if (daysEl) daysEl.parentElement.style.display = 'none';
+        if (hoursEl) hoursEl.parentElement.style.display = 'none';
+        if (minsEl) minsEl.parentElement.style.display = 'none';
+        if (secsEl) { secsEl.parentElement.style.display = 'block'; secsEl.textContent = String(seconds); }
+      }
+    }
+
+    updateTick(); tickInterval = setInterval(updateTick, 1000);
+  }
+
   function setStatus(message, type) {
     const els = getElements();
     if (!els.status) return;
@@ -276,6 +373,8 @@
     bindEvents();
     updateQtyUI();
     refreshSupply();
+
+    try { initLaunchCountdown(); } catch (e) { /* ignore if countdown not present */ }
 
     if (window.ethereum?.on) {
       window.ethereum.on('chainChanged', () => {

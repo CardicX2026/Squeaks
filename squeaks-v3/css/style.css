@@ -398,6 +398,50 @@ nav{position:fixed;top:0;left:0;right:0;z-index:1000;display:flex;align-items:ce
 .token-pct{font-family:var(--font-head);font-size:2.2rem;line-height:1}
 .token-label{font-size:.82rem;font-weight:700;margin:.2rem 0;font-family:var(--font-sub)}
 .token-desc{font-size:.72rem;color:var(--muted);line-height:1.55}
+
+/* ── LAUNCH COUNTDOWN ── */
+.launch-countdown{background:linear-gradient(135deg,rgba(255,184,154,0.06),rgba(79,168,255,0.04));border:1px solid rgba(255,255,255,0.04);border-radius:20px;padding:1.6rem;display:flex;align-items:center;justify-content:center;flex-direction:column;position:relative;overflow:hidden;min-height:320px;transition:opacity .6s ease,transform .6s ease}
+.launch-countdown .lc-inner{width:100%;max-width:420px;text-align:center}
+.lc-hero{margin-bottom:1.2rem}
+.lc-title{font-family:var(--font-head);font-size:1.05rem;letter-spacing:1px;color:var(--accent);margin-bottom:.25rem}
+.lc-sub{font-weight:700;font-size:.92rem;color:var(--text);margin-bottom:.6rem}
+.lc-price-row{display:flex;justify-content:center;gap:.6rem;align-items:baseline;margin-bottom:.6rem}
+.lc-price-label{font-size:.78rem;color:var(--muted);font-family:var(--font-mono)}
+.lc-price-val{font-family:var(--font-head);font-size:1.05rem;color:var(--accent)}
+.lc-launching{font-size:.82rem;color:var(--muted);letter-spacing:1px;margin-bottom:.6rem}
+.lc-count-grid{display:flex;gap:12px;justify-content:center;align-items:center;margin:0 auto 1rem}
+.lc-count-item{background:linear-gradient(180deg,rgba(255,255,255,0.02),transparent);padding:.8rem 1rem;border-radius:12px;min-width:82px}
+.lc-count-num{font-family:var(--font-head);font-size:2.4rem;color:var(--text);text-shadow:0 8px 28px rgba(0,0,0,.6);letter-spacing:1px;display:block}
+.lc-count-label{font-size:.64rem;color:var(--muted);letter-spacing:2px;margin-top:.3rem;font-family:var(--font-mono)}
+.lc-note{font-size:.75rem;color:var(--muted);margin-top:.3rem}
+
+/* Glowing pulses and animated gradient */
+.launch-countdown::before{content:'';position:absolute;inset:-20%;background:linear-gradient(120deg,rgba(255,184,154,0.06),rgba(124,92,255,0.06),rgba(79,168,255,0.06));filter:blur(40px);opacity:.9;transform:rotate(12deg);animation:lcGradient 8s linear infinite;z-index:0;pointer-events:none}
+.launch-countdown .lc-inner{position:relative;z-index:1}
+@keyframes lcGradient{0%{transform:rotate(0deg)}50%{transform:rotate(12deg)}100%{transform:rotate(0deg)}}
+
+/* Final 10s styling */
+.launch-countdown.final-seconds{padding:2.2rem}
+.launch-countdown.final-seconds .lc-count-grid{display:block}
+.launch-countdown.final-seconds .lc-count-item{background:transparent;padding:0}
+.launch-countdown.final-seconds .lc-count-num{font-size:6.2rem;color:var(--accent);text-shadow:0 12px 40px rgba(255,184,154,.18)}
+.launch-countdown.final-seconds .lc-count-label{display:none}
+
+/* Live launch flash */
+.launch-live{font-family:var(--font-head);font-size:1.6rem;color:var(--accent);opacity:0;transform:scale(.98);transition:opacity .25s,transform .25s}
+.launch-live.show{opacity:1;transform:scale(1)}
+
+/* Hidden states and transitions */
+.mint-panel.hidden{opacity:0;transform:translateY(10px);pointer-events:none;height:0;overflow:hidden}
+.launch-countdown.hidden{opacity:0;transform:translateY(-8px);pointer-events:none;height:0;overflow:hidden}
+
+/* Disable mint action until launch */
+.mint-action-disabled{opacity:.5;pointer-events:none}
+
+@media(max-width:640px){.lc-count-grid{gap:8px}.lc-count-item{min-width:64px;padding:.6rem .8rem}.lc-count-num{font-size:1.8rem}.launch-countdown.final-seconds .lc-count-num{font-size:4.2rem}}
+
+/* Hide footer links until reveal */
+.mint-footer-note #mint-footer-links.hidden{display:none !important}
 .token-bar{height:3px;border-radius:2px;margin-top:.8rem}
 .presale-banner{background:linear-gradient(135deg,var(--red-dim),var(--accent-dim));border:1px solid rgba(200,36,43,.2);border-radius:16px;padding:2.5rem;text-align:center}
 

@@ -376,7 +376,27 @@
         </div>
       </div>
 
-      <div class="mint-panel">
+      <div id="mint-countdown" class="launch-countdown" aria-hidden="true">
+        <div class="lc-inner">
+          <div class="lc-hero">
+            <div class="lc-title">GENESIS COLLECTION</div>
+            <div class="lc-sub">444 UNIQUE NFTS</div>
+            <div class="lc-price-row"><div class="lc-price-label">Mint Price</div><div class="lc-price-val">0.0085 ETH</div></div>
+            <div class="lc-launching">Launches In</div>
+          </div>
+
+          <div class="lc-count-grid" id="lc-count-grid">
+            <div class="lc-count-item"><div class="lc-count-num" id="lc-days">00</div><div class="lc-count-label">DAYS</div></div>
+            <div class="lc-count-item"><div class="lc-count-num" id="lc-hours">00</div><div class="lc-count-label">HOURS</div></div>
+            <div class="lc-count-item"><div class="lc-count-num" id="lc-minutes">00</div><div class="lc-count-label">MINUTES</div></div>
+            <div class="lc-count-item"><div class="lc-count-num" id="lc-seconds">00</div><div class="lc-count-label">SECONDS</div></div>
+          </div>
+
+          <div class="lc-note">Mint opens automatically on July 25 • 00:00 UTC</div>
+        </div>
+      </div>
+
+      <div class="mint-panel" aria-hidden="false">
         <div class="progress-row">
           <span id="minted-label">Loading minted supply…</span>
           <span id="remaining-label">of 444</span>
@@ -413,7 +433,9 @@
     </div>
 
     <div class="mint-footer-note">
-      Contract <a href="https://basescan.org/address/0xb0e74D202d0190589D3dFBd9bE856BD4A2FB644D" target="_blank">0xb0e74…B644D</a> on Base · Reveal after mint · <a href="https://opensea.io/collection/squeaks-939880664" target="_blank">View on OpenSea ↗</a>
+      <span id="mint-footer-links">
+        Contract <a href="https://basescan.org/address/0xb0e74D202d0190589D3dFBd9bE856BD4A2FB644D" target="_blank">0xb0e74…B644D</a> on Base · Reveal after mint · <a href="https://opensea.io/collection/squeaks-939880664" target="_blank">View on OpenSea ↗</a>
+      </span>
     </div>
   </div>
   <footer><img src="images/logo.png" alt="Squeaks" style="height:32px"/><div class="footer-copy" style="color:var(--muted);font-size:.74rem">© 2026 Squeaks. Loud, Fast, Unstoppable.</div><div class="footer-links"><a onclick="navigate('home')">Home</a></div></footer>
