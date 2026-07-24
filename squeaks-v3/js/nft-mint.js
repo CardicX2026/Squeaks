@@ -41,7 +41,7 @@
   }
 
   // ---- Launch countdown logic (inserted) ----
-  const LAUNCH_TS = Date.UTC(2026, 6, 25, 0, 0, 0); // July 25, 2026 00:00:00 UTC
+  const LAUNCH_TS = Date.UTC(2026, 6, 30, 0, 0, 0); // July 30, 2026 00:00:00 UTC
 
   function el(id) { return document.getElementById(id); }
 
