@@ -81,7 +81,6 @@ const URL_MAP = {
 if (fab) fab.style.display = id === 'shop' ? 'flex' : 'none';
 if (id === 'nft') {
   setTimeout(initFloatingNFTs, 120);
-  setTimeout(() => window.SqueaksMint?.refreshSupply?.(), 250);
 }
   if (id === 'community') setTimeout(initCountUps, 300);
   if (id === 'lab-hub') { if (!priceData.length) fetchPrices(); else { renderTicker(); renderMarketCards(); } }
