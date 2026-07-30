@@ -1321,3 +1321,31 @@ window.addEventListener('popstate', function(e) {
   if (e.state && e.state.page) navigate(e.state.page);
 });
 
+
+// NFT mint countdown -> reveals OpenSea mint button on expiry
+(function(){
+  var mintTime = Date.UTC(2026, 6, 31, 0, 0, 0); // 31 July 2026 00:00 UTC
+  function tick(){
+    var el = document.getElementById('nft-countdown');
+    if(!el) return;
+    var diff = mintTime - Date.now();
+    if(diff <= 0){
+      el.style.display = 'none';
+      var cta = document.getElementById('nft-mint-cta');
+      if(cta) cta.style.display = 'block';
+      clearInterval(timer);
+      return;
+    }
+    var d = Math.floor(diff / 86400000);
+    var h = Math.floor((diff % 86400000) / 3600000);
+    var m = Math.floor((diff % 3600000) / 60000);
+    var s = Math.floor((diff % 60000) / 1000);
+    var pad = function(n){ return String(n).padStart(2,'0'); };
+    document.getElementById('cd-days').textContent = pad(d);
+    document.getElementById('cd-hours').textContent = pad(h);
+    document.getElementById('cd-mins').textContent = pad(m);
+    document.getElementById('cd-secs').textContent = pad(s);
+  }
+  var timer = setInterval(tick, 1000);
+  tick();
+})();

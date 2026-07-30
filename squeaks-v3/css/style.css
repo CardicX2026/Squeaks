@@ -643,3 +643,8 @@ footer{border-top:1px solid var(--border);padding:2rem 2.5rem;display:flex;justi
 .seg-post-title:hover{color:var(--accent)}
 .seg-post-date{font-size:.65rem;color:var(--muted);font-family:var(--font-mono)}
 
+
+/* NFT mint countdown */
+.countdown-unit{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:.8rem 1rem;min-width:64px}
+.countdown-num{font-family:var(--font-head);font-size:1.6rem;line-height:1;color:var(--accent)}
+.countdown-label{font-family:var(--font-mono);font-size:.6rem;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-top:.3rem}
