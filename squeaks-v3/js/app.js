@@ -102,8 +102,8 @@ function getRouteFromLocation() {
   if (document.getElementById('page-' + path)) return path;
   return 'home';
 }
-function toggleMobileMenu() { document.getElementById('mobile-menu').classList.toggle('open'); }
-function closeMobileMenu() { document.getElementById('mobile-menu')?.classList.remove('open'); }
+function toggleMobileMenu() { document.getElementById('mobile-menu').classList.toggle('open'); document.querySelector('.hamburger')?.classList.toggle('active'); }
+function closeMobileMenu() { document.getElementById('mobile-menu')?.classList.remove('open'); document.querySelector('.hamburger')?.classList.remove('active'); }
 
 // ══════════════════════════════
 // AUTH
