@@ -2,7 +2,7 @@
 /* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { fmt, PageHead, Shell } from "@/components/ui";
+import { fmt, PageHead, Shell, GameNav } from "@/components/ui";
 import { item, useGame } from "@/lib/store";
 
 type Row = { handle: string; score: number; img: string; me?: boolean };
@@ -35,10 +35,11 @@ export default function Leaderboard() {
     : base;
 
   return (
-    <Shell>
+    <Shell theme="game">
       <PageHead eyebrow="Leaderboard" title={<>Top <span className="yel">runners</span></>} img="karate">
         Best single run per player. Daily resets at 00:00 UTC, weekly on Monday. Seasons come later.
       </PageHead>
+      <section className="wrap" style={{ paddingBottom: 0 }}><GameNav /></section>
       <section className="wrap" style={{ maxWidth: 760 }}>
         <div className="card">
           <div className="row" style={{ marginBottom: 14 }}>
