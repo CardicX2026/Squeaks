@@ -17,16 +17,16 @@ export const DAILY_POINTS_CAP = 300;
 export const REF_BONUS = 100;
 
 export type Cat = "Skins" | "Hats" | "Trails" | "Boosts";
-export type Item = { id: string; cat: Cat; name: string; price: number; note: string; img?: string; glyph?: string; color?: string };
+export type Item = { id: string; cat: Cat; name: string; price: number; note: string; img?: string; glyph?: string; color?: string; model?: string };
 
 export const ITEMS: Item[] = [
-  { id: "skin_shades", cat: "Skins", name: "Street Classic", price: 0, note: "Starter", img: "shades" },
-  { id: "skin_chef", cat: "Skins", name: "Chef Brie", price: 1200, note: "Skin", img: "chef" },
+  { id: "skin_shades", cat: "Skins", name: "Night Runner", price: 0, note: "Starter · 3D", img: "runner" },
+  { id: "skin_chef", cat: "Skins", name: "Chef Brie", price: 1200, note: "Playable 3D skin", img: "chef", model: "/models/skins/skin_chef.glb" },
   { id: "skin_ninja", cat: "Skins", name: "Dojo Shadow", price: 2400, note: "Rare", img: "ninja" },
   { id: "skin_space", cat: "Skins", name: "Orbit DJ", price: 3000, note: "Epic", img: "space" },
   { id: "skin_safari", cat: "Skins", name: "Safari Scout", price: 900, note: "Skin", img: "safari" },
   { id: "skin_jazz", cat: "Skins", name: "Midnight Jazz", price: 1500, note: "Skin", img: "jazz" },
-  { id: "skin_racer", cat: "Skins", name: "Pit Lane", price: 1100, note: "Skin", img: "racer" },
+  { id: "skin_racer", cat: "Skins", name: "Pit Lane", price: 1100, note: "Playable 3D skin", img: "racer", model: "/models/skins/skin_racer.glb" },
   { id: "skin_gamer", cat: "Skins", name: "Degen Gamer", price: 1800, note: "Rare", img: "gamer" },
   { id: "hat_top", cat: "Hats", name: "Top Hat", price: 450, note: "Hat", glyph: "🎩" },
   { id: "hat_crown", cat: "Hats", name: "Cheese Crown", price: 900, note: "Rare", glyph: "👑" },

@@ -26,20 +26,20 @@ const rnd = (a: number, b: number) => a + Math.random() * (b - a);
 
 /* ---------- model loading (cached, shared across mounts) ---------- */
 export type MouseAsset = { scene: THREE.Object3D; animations: THREE.AnimationClip[] };
-let mousePromise: Promise<MouseAsset | null> | null = null;
+const mouseCache = new Map<string, Promise<MouseAsset | null>>();
 let progressCb: ((p: number) => void) | undefined;
-export function preloadMouse(onProgress?: (p: number) => void) {
+export function preloadMouse(onProgress?: (p: number) => void, url = MOUSE_URL) {
   progressCb = onProgress;
-  if (!mousePromise)
+  let mousePromise = mouseCache.get(url);
+  if (!mousePromise) {
     mousePromise = new Promise((res) => {
       const loader = new GLTFLoader();
       loader.setMeshoptDecoder(MeshoptDecoder);
-      loader.load(MOUSE_URL, async (g) => {
+      loader.load(url, async (g) => {
+        if (url !== MOUSE_URL) return res({ scene: g.scene, animations: g.animations });
         // Optional per-animation files (same rig): /models/anim/run.glb, jump.glb, slide.glb, fall.glb, idle.glb
         const extra = await Promise.all(["run", "jump", "slide", "fall", "idle"].map(async (k) => {
           try {
-            const head = await fetch(`/models/anim/${k}.glb`, { method: "HEAD" });
-            if (!head.ok || !(head.headers.get("content-type") ?? "").includes("model")) return null;
             const clip = (await loader.loadAsync(`/models/anim/${k}.glb`)).animations[0];
             if (clip) clip.name = k;
             return clip ?? null;
@@ -47,9 +47,56 @@ export function preloadMouse(onProgress?: (p: number) => void) {
         }));
         const named = extra.filter((c): c is THREE.AnimationClip => !!c);
         res({ scene: g.scene, animations: named.length ? named : g.animations });
-      }, (e) => { if (e.total) progressCb?.(e.loaded / e.total); }, () => res(null));
+      }, (e) => { if (e.total) progressCb?.(e.loaded / e.total); }, (err) => { console.warn(`[cheese-chase] could not load ${url}`, err); if (url !== MOUSE_URL) preloadMouse(onProgress).then(res); else res(null); });
     });
+    mouseCache.set(url, mousePromise);
+  }
   return mousePromise;
+}
+
+/** Does a model file exist? (Next serves an HTML 404 page otherwise.) */
+export async function hasModel(url: string) {
+  try {
+    const r = await fetch(url, { method: "HEAD" });
+    return r.ok && (r.headers.get("content-type") ?? "").includes("model");
+  } catch { return false; }
+}
+
+export type Props = Partial<Record<"cheese" | "pod" | "barrier", THREE.Object3D>>;
+let propsPromise: Promise<Props> | null = null;
+/** Optional Meshy prop models in /models/props. Each is normalised to game size; missing ones fall back to code-built shapes. */
+export function preloadProps() {
+  if (!propsPromise) propsPromise = (async () => {
+    const loader = new GLTFLoader();
+    loader.setMeshoptDecoder(MeshoptDecoder);
+    const out: Props = {};
+    const fit: Record<string, (o: THREE.Object3D, size: THREE.Vector3) => void> = {
+      cheese: (o, sz) => { o.scale.multiplyScalar(0.8 / Math.max(sz.x, sz.y, sz.z)); },
+      barrier: (o, sz) => { o.scale.multiplyScalar(1.9 / Math.max(sz.x, sz.z)); },
+      pod: (o, sz) => { o.scale.multiplyScalar(1.95 / Math.min(sz.x, sz.z)); },
+    };
+    await Promise.all((["cheese", "pod", "barrier"] as const).map(async (k) => {
+      const url = `/models/props/${k}.glb`;
+      try {
+        const g = await loader.loadAsync(url);
+        const o = g.scene;
+        let box = new THREE.Box3().setFromObject(o), sz = box.getSize(new THREE.Vector3());
+        // long axis along the track (z)
+        if ((k === "pod" || k === "barrier") && (k === "pod" ? sz.x > sz.z : sz.z > sz.x)) { o.rotation.y = Math.PI / 2; box = new THREE.Box3().setFromObject(o); sz = box.getSize(new THREE.Vector3()); }
+        fit[k](o, sz);
+        box = new THREE.Box3().setFromObject(o);
+        const c = box.getCenter(new THREE.Vector3());
+        o.position.x -= c.x; o.position.z -= c.z;
+        o.position.y -= k === "cheese" ? c.y : box.min.y; // cheese centred, others stand on the ground
+        const wrap = new THREE.Group();
+        wrap.add(o);
+        wrap.userData.len = box.getSize(new THREE.Vector3()).z;
+        out[k] = wrap;
+      } catch { /* keep the fallback shape */ }
+    }));
+    return out;
+  })();
+  return propsPromise;
 }
 
 /* ---------- textures drawn in code ---------- */
@@ -112,6 +159,8 @@ export class Runner3D {
   private rig = new THREE.Group();
   private holder = new THREE.Group();
   private board = new THREE.Group();
+  private props: Props = {};
+  setProps(p: Props) { this.props = p; }
   private mixer: THREE.AnimationMixer | null = null;
   private anims: Partial<Record<"run" | "jump" | "slide" | "die" | "idle", THREE.AnimationAction>> = {};
   private curAnim = "";
@@ -165,10 +214,13 @@ export class Runner3D {
         if (s.isMeshStandardMaterial && s.metalness > 0.4) s.metalness = 0.25; // no env map, so tame metal
       }
     });
-    const box = new THREE.Box3().setFromObject(m);
+    // precise = follow the skeleton, so rigs that store their scale in the armature size correctly
+    m.updateMatrixWorld(true);
+    const box = new THREE.Box3().setFromObject(m, true);
     const size = box.getSize(new THREE.Vector3());
     m.scale.multiplyScalar(MOUSE_H / size.y);
-    box.setFromObject(m);
+    m.updateMatrixWorld(true);
+    box.setFromObject(m, true);
     const c = box.getCenter(new THREE.Vector3());
     m.position.x -= c.x; m.position.z -= c.z; m.position.y += BOARD_TOP - box.min.y;
     m.rotation.y = Math.PI; // face down the track, back to the camera
@@ -483,7 +535,16 @@ export class Runner3D {
 
   private add(k: Kind, l: number, z: number, y = 0) {
     let m: THREE.Object3D, len = 0;
-    if (k === "c") {
+    if (k === "c" && this.props.cheese) {
+      m = this.props.cheese.clone();
+      m.position.y = y;
+    } else if (k === "low" && this.props.barrier) {
+      m = this.props.barrier.clone();
+    } else if (k === "pod" && this.props.pod) {
+      m = this.props.pod.clone();
+      len = m.userData.len as number;
+      z -= len / 2;
+    } else if (k === "c") {
       m = new THREE.Mesh(this.geo.cheese, this.mat.cheese);
       m.position.y = y;
     } else if (k === "low") {
