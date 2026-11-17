@@ -2,7 +2,7 @@
 /* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { CARDICX, Cheese, fmt, PageHead, Shell } from "@/components/ui";
+import { CARDICX, Cheese, fmt, PageHead, Shell, GameNav } from "@/components/ui";
 import { item, ITEMS, resetAll, setHandle, toast, useGame } from "@/lib/store";
 
 export default function Profile() {
@@ -13,10 +13,11 @@ export default function Profile() {
   const skin = item(g.equip.Skins)?.img ?? "shades";
 
   return (
-    <Shell>
+    <Shell theme="game">
       <PageHead eyebrow="Profile" title={g.handle ? <>@{g.handle}</> : <>Guest <span className="yel">mouse</span></>} img={skin}>
         You are playing as a guest. Progress is saved on this device until login goes live.
       </PageHead>
+      <section className="wrap" style={{ paddingBottom: 0 }}><GameNav /></section>
       <section className="wrap two">
         <div style={{ display: "grid", gap: 18 }}>
           <div className="card">
@@ -37,7 +38,7 @@ export default function Profile() {
           </div>
           <div className="card" style={{ borderColor: "rgba(59,120,255,.45)" }}>
             <span className="eyebrow" style={{ color: "var(--cx)" }}>CardicX account</span>
-            <p className="muted" style={{ margin: "12px 0 16px" }}>Connect to save progress across devices and see your Squeaks points in the CardicX Rewards Center.</p>
+            <p className="muted" style={{ margin: "12px 0 16px" }}>Connect to save progress across devices and redeem your Squeaks rewards in the CardicX Rewards Center.</p>
             <div className="row" style={{ justifyContent: "flex-start" }}>
               <button className="btn btn-cx btn-sm" onClick={() => toast("Login is not switched on in this test build")}>Connect CardicX</button>
               <a className="cxl" href={CARDICX} target="_blank" rel="noreferrer">cardicx.com ↗</a>

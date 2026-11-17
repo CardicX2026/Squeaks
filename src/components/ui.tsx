@@ -69,18 +69,50 @@ export function CountUp({ to, dur = 1400, suffix = "" }: { to: number; dur?: num
 }
 
 const NAV = [
-  { h: "/", n: "Home" }, { h: "/token", n: "Token" }, { h: "/nfts", n: "NFTs" }, { h: "/play", n: "Play" },
-  { h: "/mine", n: "Mine" }, { h: "/shop", n: "Shop" }, { h: "/rewards", n: "Rewards" },
+  { h: "/", n: "Home" }, { h: "/token", n: "Token" }, { h: "/nfts", n: "NFTs" }, { h: "/play", n: "Arcade" },
+  { h: "/mine", n: "Mine" }, { h: "/rewards", n: "Rewards" },
 ];
-const TABS = [
-  { h: "/", n: "Home", i: "M3 11 12 3l9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z" },
-  { h: "/token", n: "Token", i: "M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm1 4v1.6c1.5.3 2.6 1.3 2.8 2.8h-2c-.2-.6-.8-1-1.8-1-1.1 0-1.6.4-1.6 1s.6.9 2 1.2c2.3.5 3.6 1.3 3.6 3.2 0 1.5-1.1 2.6-3 2.9V18h-2v-1.4c-1.7-.3-2.9-1.4-3-3h2c.2.8.9 1.2 2 1.2 1.2 0 1.8-.5 1.8-1.1 0-.7-.6-1-2.2-1.3-2-.4-3.4-1.2-3.4-3.1 0-1.4 1-2.5 2.8-2.8V6z" },
-  { h: "/nfts", n: "NFTs", i: "M6 3h12l4 6-10 12L2 9z" },
-  { h: "/play", n: "Play", i: "M7 4v16l13-8z" },
-  { h: "/mine", n: "Mine", i: "M14 3c3 0 6 2 7 5l-3 1c-1-2-2-3-4-3zM13 7l3 3L6 21l-3-3z" },
+export const GAME_NAV = [
+  { h: "/play", n: "Arcade" }, { h: "/mine", n: "Mine" }, { h: "/shop", n: "Shop" },
+  { h: "/rewards", n: "Rewards" }, { h: "/leaderboard", n: "Leaderboard" }, { h: "/profile", n: "Profile" },
 ];
 
-export function Shell({ children }: { children: ReactNode }) {
+/* Colourful tab icons (original artwork, drawn in code) */
+function TabIcon({ n }: { n: string }) {
+  const s = { width: 26, height: 26, viewBox: "0 0 32 32" };
+  if (n === "Home") return (
+    <svg {...s}><path d="M4 22a12 12 0 0 1 24 0v4H4z" fill="#e8f3ff" stroke="#7fb3ea" strokeWidth="1.6" /><path d="M8 17h16M6 21.5h20M12 12.5v4.5M20 12.5v4.5M16 17v4.5" stroke="#a9cdf2" strokeWidth="1.3" /><path d="M13 26v-4a3 3 0 0 1 6 0v4z" fill="#f28c3f" /><circle cx="24" cy="7" r="2.2" fill="#fff" stroke="#bcd8f5" /></svg>);
+  if (n === "Token") return (
+    <svg {...s}><circle cx="16" cy="16" r="12" fill="#ffc83d" stroke="#e09a00" strokeWidth="1.8" /><circle cx="16" cy="16" r="8.5" fill="none" stroke="#f5b000" strokeWidth="1.2" /><path d="M19.5 12.5c-.6-1.2-1.9-1.9-3.5-1.9-2 0-3.4 1-3.4 2.6 0 3.5 7 1.9 7 5.4 0 1.6-1.5 2.7-3.6 2.7-1.7 0-3.1-.7-3.8-2" fill="none" stroke="#8a5a00" strokeWidth="1.9" strokeLinecap="round" /></svg>);
+  if (n === "NFTs") return (
+    <svg {...s}><path d="M9 5h14l6 8-13 15L3 13z" fill="#f5a3a7" /><path d="M3 13h26L16 28z" fill="#e8818a" /><path d="M9 5l3 8 4-8 4 8 3-8" fill="#ffd3d6" /><path d="M12 13l4 15 4-15" fill="#f5a3a7" /></svg>);
+  if (n === "Arcade") return (
+    <svg {...s}><path d="M8 9h16a6 6 0 0 1 6 6v3a5 5 0 0 1-9 3l-1-1h-8l-1 1a5 5 0 0 1-9-3v-3a6 6 0 0 1 6-6z" fill="#f28c3f" /><path d="M8 13v5M5.5 15.5h5" stroke="#fff" strokeWidth="2" strokeLinecap="round" /><circle cx="21" cy="14" r="1.6" fill="#ffc83d" /><circle cx="24.5" cy="17" r="1.6" fill="#7ed9bc" /></svg>);
+  return (
+    <svg {...s}><path d="M7 27 20 12" stroke="#a86a3a" strokeWidth="3.2" strokeLinecap="round" /><path d="M11 6c6-3 13-1 17 4-5-2-10-2-14 1z" fill="#9aa6c4" stroke="#6f7c9d" strokeWidth="1.2" /><path d="M21 22l7-3 1 6h-8z" fill="#ffc83d" /><circle cx="25" cy="22.5" r="1" fill="#e09a00" /></svg>);
+}
+const TABS = ["/", "/token", "/nfts", "/play", "/mine"].map((h, i) => ({ h, n: ["Home", "Token", "NFTs", "Arcade", "Mine"][i] }));
+
+function SocialIcon({ i }: { i: string }) {
+  const p: Record<string, ReactNode> = {
+    tg: <path d="M21 4 3 11l6 2 2 6 3-4 5 4z M9 13l9-6" />,
+    x: <path d="M4 4l16 16M20 4 4 20" />,
+    ig: <><rect x="4" y="4" width="16" height="16" rx="5" /><circle cx="12" cy="12" r="3.6" /><circle cx="17" cy="7" r=".6" /></>,
+    zealy: <path d="M12 3l2.6 5.4 5.9.9-4.3 4.1 1 5.9L12 16.6 6.8 19.3l1-5.9L3.5 9.3l5.9-.9z" />,
+  };
+  return <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden>{p[i]}</svg>;
+}
+
+export function GameNav() {
+  const path = usePathname();
+  return (
+    <nav className="gnav" aria-label="Game">
+      {GAME_NAV.map((g) => <Link key={g.h} href={g.h} className={path === g.h || (g.h === "/play" && path.startsWith("/play")) ? "on" : ""}>{g.n}</Link>)}
+    </nav>
+  );
+}
+
+export function Shell({ children, theme = "site" }: { children: ReactNode; theme?: "site" | "game" }) {
   const path = usePathname();
   const g = useGame();
   const t = useToast();
@@ -88,7 +120,6 @@ export function Shell({ children }: { children: ReactNode }) {
     const r = new URLSearchParams(window.location.search).get("ref");
     if (r) setRef(r);
   }, []);
-  // scroll-reveal for anything marked data-r
   useEffect(() => {
     const io = new IntersectionObserver((es) => es.forEach((e) => { if (e.isIntersecting) { e.target.classList.add("in"); io.unobserve(e.target); } }), { rootMargin: "0px 0px -8% 0px" });
     const scan = () => document.querySelectorAll("[data-r]:not(.in)").forEach((el) => io.observe(el));
@@ -99,10 +130,10 @@ export function Shell({ children }: { children: ReactNode }) {
   }, [path]);
   const on = (h: string) => (h === "/" ? path === "/" : path.startsWith(h));
   return (
-    <>
-      {TESTING && <div className="testbar">Test build · guest mode · everything is free and each tester starts with 999 Cheese</div>}
-      <nav className="nav wrap" aria-label="Main">
-        <div className="nav-in">
+    <div className={theme}>
+      <Snow />
+      <nav className="nav" aria-label="Main">
+        <div className="wrap nav-in">
           <Link href="/" className="logo" aria-label="Squeaks home">
             <span className="logo-av"><img src="/nft/n11.webp" alt="" /></span>Squeaks<small>$SQKS</small>
           </Link>
@@ -116,33 +147,80 @@ export function Shell({ children }: { children: ReactNode }) {
         </div>
       </nav>
       <main>{children}</main>
-      <footer>
+      <footer className="navy">
         <div className="wrap">
-          <div className="foot">
+          <div className="ftop">
             <div>
               <span className="logo"><span className="logo-av"><img src="/nft/n11.webp" alt="" /></span>Squeaks</span>
-              <p style={{ marginTop: 14, maxWidth: 380 }}>A meme-culture community on Solana with real products behind it. Part of the CardicX ecosystem.</p>
+              <h2 style={{ marginTop: 22 }}>The official token of <span className="yel">CardicX.</span></h2>
+              <p className="muted">Meme culture with real products behind it. Squeaks rewards are redeemable in the CardicX Rewards Center.</p>
             </div>
-            <div className="fcol"><b>Explore</b><Link href="/token">$SQKS token</Link><Link href="/nfts">CDXLIV NFTs</Link><Link href="/play">Cheese Chase</Link><Link href="/mine">Cheese Mine</Link><Link href="/shop">Shop</Link></div>
-            <div className="fcol"><b>Account</b><Link href="/rewards">Rewards</Link><Link href="/leaderboard">Leaderboard</Link><Link href="/profile">Profile</Link><a href={DOCS} target="_blank" rel="noreferrer">Docs ↗</a><a href={CARDICX} className="cxl" target="_blank" rel="noreferrer">CardicX ↗</a></div>
+            <div>
+              <div className="socials">
+                {SOCIALS.map((s) => <a key={s.n} href={s.h} target="_blank" rel="noreferrer" className="soc" aria-label={s.n} title={s.n}><SocialIcon i={s.i} /></a>)}
+              </div>
+              <div className="hero-cta" style={{ justifyContent: "inherit", marginTop: 18 }}>
+                <a href={SOCIALS[0].h} target="_blank" rel="noreferrer" className="btn btn-play">Join the whitelist</a>
+                <a href={CARDICX} target="_blank" rel="noreferrer" className="btn btn-cx">Open CardicX ↗</a>
+              </div>
+            </div>
+          </div>
+          <div className="foot" style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>
+            <div className="fcol"><b>$SQKS</b><Link href="/token">Token</Link><Link href="/token">Squeakonomics</Link><a href={DOCS} target="_blank" rel="noreferrer">Docs ↗</a></div>
+            <div className="fcol"><b>CDXLIV</b><Link href="/nfts">Collection</Link><Link href="/nfts#mint">Mint & whitelist</Link><Link href="/nfts">Membership perks</Link></div>
+            <div className="fcol"><b>Arcade</b><Link href="/play">Games</Link><Link href="/mine">Cheese Mine</Link><Link href="/shop">Shop</Link><Link href="/leaderboard">Leaderboard</Link></div>
             <div className="fcol"><b>Community</b>{SOCIALS.map((s) => <a key={s.n} href={s.h} target="_blank" rel="noreferrer">{s.n} ↗</a>)}</div>
           </div>
           <p className="legal">
             $SQKS is a community token. Nothing on this site is financial advice, an offer, or a promise of value, price or returns. Cheese and Squeaks points are in-game balances with no cash value.
             Crypto assets are volatile; only take part with what you can afford to lose, and check that it is allowed where you live.
           </p>
+          <div className="copy-row"><span>© {new Date().getFullYear()} Squeaks. All rights reserved.</span><span>Built on Solana · Part of the CardicX ecosystem</span></div>
         </div>
       </footer>
       <div className="tabbar">
         {TABS.map((x) => (
           <Link key={x.h} href={x.h} className={on(x.h) ? "on" : ""}>
-            <svg width="22" height="22" viewBox="0 0 24 24"><path d={x.i} fill="currentColor" fillRule="evenodd" /></svg>{x.n}
+            <span className="ti"><TabIcon n={x.n} /></span>{x.n}
           </Link>
         ))}
       </div>
       {t && <div className="toast" role="status">{t}</div>}
-    </>
+    </div>
   );
+}
+
+/** Light winter snowfall on a canvas. Pauses when the tab is hidden; off for reduced motion. */
+export function Snow({ count = 70 }: { count?: number }) {
+  const ref = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const c = ref.current!;
+    const ctx = c.getContext("2d")!;
+    let w = 0, h = 0, raf = 0, last = performance.now();
+    const n = window.innerWidth < 600 ? Math.round(count * 0.55) : count;
+    const flakes = Array.from({ length: n }, () => ({ x: Math.random(), y: Math.random(), r: 1 + Math.random() * 2.6, s: 0.25 + Math.random() * 0.6, d: Math.random() * 6.28 }));
+    const size = () => { const dpr = Math.min(2, devicePixelRatio || 1); w = innerWidth; h = innerHeight; c.width = w * dpr; c.height = h * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0); };
+    size();
+    addEventListener("resize", size);
+    const tick = (now: number) => {
+      const dt = Math.min(0.05, (now - last) / 1000); last = now;
+      ctx.clearRect(0, 0, w, h);
+      for (const f of flakes) {
+        f.y += (f.s * 40 * dt) / h * (1 + f.r * 0.3) * 1;
+        f.d += dt * 0.8;
+        if (f.y > 1.02) { f.y = -0.02; f.x = Math.random(); }
+        const x = f.x * w + Math.sin(f.d) * 14, y = f.y * h;
+        ctx.beginPath(); ctx.arc(x, y, f.r, 0, 6.283);
+        ctx.fillStyle = "rgba(255,255,255,0.92)"; ctx.fill();
+        ctx.lineWidth = 0.8; ctx.strokeStyle = "rgba(120,160,215,0.35)"; ctx.stroke();
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => { cancelAnimationFrame(raf); removeEventListener("resize", size); };
+  }, [count]);
+  return <canvas ref={ref} className="snow" aria-hidden />;
 }
 
 export function PageHead({ eyebrow, title, children, img }: { eyebrow: string; title: ReactNode; children?: ReactNode; img?: string }) {

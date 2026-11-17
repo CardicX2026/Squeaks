@@ -1,5 +1,5 @@
 "use client";
-import { Cheese, PageHead, Shell } from "@/components/ui";
+import { Cheese, PageHead, Shell, GameNav } from "@/components/ui";
 import { canClaimDaily, claimDaily, claimMission, dailyReward, missionProgress, MISSIONS, toast, today, useGame } from "@/lib/store";
 
 export default function Rewards() {
@@ -10,10 +10,11 @@ export default function Rewards() {
   const done = kept ? (g.daily.last === today() ? g.daily.streak : g.daily.streak % 7) : 0;
 
   return (
-    <Shell>
+    <Shell theme="game">
       <PageHead eyebrow="Rewards" title={<>Show up, <span className="yel">get paid in Cheese</span></>} img="cozy">
         A daily reward that grows with your streak, and three missions that reset every day at 00:00 UTC.
       </PageHead>
+      <section className="wrap" style={{ paddingBottom: 0 }}><GameNav /></section>
       <section className="wrap two">
         <div className="card">
           <div className="row"><h2 style={{ fontSize: 26 }}>Daily reward</h2><span className="pill">Streak {done} / 7</span></div>

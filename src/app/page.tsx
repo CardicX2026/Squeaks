@@ -10,7 +10,7 @@ const PILLARS = [
   { i: "stake", t: "Staking & rewards", p: "A locked reserve paid out through staking pools over time, plus airdrops for the community that builds this.", h: "/token" },
   { i: "shirt", t: "Merch & shop", p: "Premium merch that carries the brand off-chain, and an in-game shop for skins, trails and boosts.", h: "/shop" },
   { i: "vote", t: "ECO votes", p: "Holders help steer the ecosystem, from how buybacks are used to what gets built next.", h: "/token" },
-  { i: "link", t: "Built into CardicX", p: "One account across both. Squeaks adds culture and rewards to the CardicX trading platform.", h: CARDICX },
+  { i: "link", t: "Official token of CardicX", p: "$SQKS is the official token of CardicX, and Squeaks rewards are redeemable on the platform.", h: CARDICX },
 ];
 
 const MARQ = NFTS.slice(0, 14);
@@ -19,24 +19,24 @@ const FEATURE = [NFTS[0], NFTS[9], NFTS[13], NFTS[20]];
 export default function Home() {
   return (
     <Shell>
-      {/* HERO — night */}
-      <section className="hero">
+      {/* HERO — winter */}
+      <section className="hero winter">
         <div className="wrap hero-grid">
           <div>
-            <span className="pill" data-r><span className="dot" /> {TOKEN.ticker} · community token on {TOKEN.chain}</span>
+            <span className="pill" data-r><span className="dot" /> {TOKEN.ticker} · the official token of CardicX</span>
             <h1 data-r style={{ ["--d" as string]: 1 }}>
               The loudest mouse in the{" "}
               <span className="hl">trenches.
-                <svg viewBox="0 0 300 30" preserveAspectRatio="none" aria-hidden><path d="M4 22 C 80 6, 200 4, 296 16" fill="none" stroke="#f5a3a7" strokeWidth="6" strokeLinecap="round" /></svg>
+                <svg viewBox="0 0 300 30" preserveAspectRatio="none" aria-hidden><path d="M4 22 C 80 6, 200 4, 296 16" fill="none" stroke="#f28c3f" strokeWidth="6" strokeLinecap="round" /></svg>
               </span>
             </h1>
             <p className="lead" data-r style={{ ["--d" as string]: 2 }}>
-              Meme culture with real products behind it: the CDXLIV membership, a game you can actually play,
-              premium merch, and rewards that plug straight into CardicX.
+              Meme culture with real products behind it. Hold {TOKEN.ticker}, collect a CDXLIV membership, play in the arcade,
+              and redeem your rewards on CardicX.
             </p>
             <div className="hero-cta" data-r style={{ ["--d" as string]: 3 }}>
               <Link href="/token" className="btn btn-play btn-big">Explore {TOKEN.ticker} <span className="arr">→</span></Link>
-              <Link href="/nfts" className="btn btn-ghost btn-big">View the NFTs</Link>
+              <Link href="/play" className="btn btn-ghost btn-big">Enter the arcade</Link>
             </div>
             <div className="facts" data-r style={{ ["--d" as string]: 4 }}>
               <div><b>1B</b><span>Fixed supply</span></div>
@@ -44,15 +44,19 @@ export default function Home() {
               <div><b>Solana</b><span>Network</span></div>
             </div>
           </div>
-          <div className="stack" data-r style={{ ["--d" as string]: 2 }} aria-hidden>
-            <div className="blob" />
-            <div className="main"><img src={NFTS[10].src} alt="" /></div>
-            <div className="sm b"><img src={NFTS[11].src} alt="" /></div>
-            <div className="sm a"><img src={NFTS[1].src} alt="" /></div>
-            <div className="sm c"><img src={NFTS[21].src} alt="" /></div>
+          <div className="globe" data-r style={{ ["--d" as string]: 2 }} aria-hidden>
+            <div className="glass">
+              <img src={NFTS[18].src} alt="" />
+              <div className="flakes">{Array.from({ length: 14 }, (_, i) => <i key={i} style={{ left: `${(i * 23) % 96}%`, animationDuration: `${5 + (i % 5)}s`, animationDelay: `${-i * 0.7}s`, width: 4 + (i % 3) * 2, height: 4 + (i % 3) * 2 }} />)}</div>
+            </div>
+            <div className="base">SQUEAKS</div>
             <span className="chip c1"><span className="wave">👋</span> gm, trenches</span>
           </div>
         </div>
+        <svg className="hills" viewBox="0 0 1440 140" preserveAspectRatio="none" aria-hidden>
+          <path d="M0 90 C 200 30, 380 120, 620 70 S 1040 20, 1240 80 S 1440 60, 1440 60 V140 H0z" fill="#ffffff" opacity=".7" />
+          <path d="M0 110 C 260 70, 460 140, 760 100 S 1180 70, 1440 105 V140 H0z" fill="#f2f8ff" />
+        </svg>
       </section>
 
       <div className="ticker" aria-hidden>
@@ -62,8 +66,9 @@ export default function Home() {
         </div>
       </div>
 
-      {/* ABOUT — cream */}
-      <section className="sec light">
+      {/* ABOUT — cream with soft art */}
+      <section className="sec light bg-art">
+        <div className="art" style={{ backgroundImage: "url(/mice/crew.webp)" }} />
         <div className="wrap">
           <div className="split" style={{ alignItems: "end" }}>
             <div>
@@ -79,11 +84,6 @@ export default function Home() {
                 <a href={DOCS} target="_blank" rel="noreferrer" className="btn btn-dark">Read the docs ↗</a>
               </div>
             </div>
-          </div>
-        </div>
-        <div className="marq" style={{ marginTop: "clamp(48px, 7vw, 88px)" }} data-r>
-          <div className="marq-track">
-            {[...MARQ, ...MARQ].map((n, i) => <div key={i} className="mcard"><img src={n.src} alt={n.name} loading="lazy" /><div>{n.name}</div></div>)}
           </div>
         </div>
       </section>
@@ -108,8 +108,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* TOKENOMICS + LAUNCH — night */}
-      <section className="sec">
+      {/* TOKENOMICS + LAUNCH — navy */}
+      <section className="sec navy">
         <div className="wrap">
           <div className="split" style={{ alignItems: "start" }}>
             <div>
@@ -154,24 +154,21 @@ export default function Home() {
               <div className="hero-cta" data-r style={{ marginTop: 22 }}><Link href="/nfts" className="btn btn-dark">See the collection <span className="arr">→</span></Link></div>
             </div>
           </div>
-          <div className="nft-row">
-            {FEATURE.map((n, i) => (
-              <Link key={n.src} href="/nfts" data-r style={{ ["--d" as string]: i }}>
-                <img src={n.src} alt={n.name} loading="lazy" /><span>{n.name}</span>
-              </Link>
-            ))}
+          <div className="nft-mini" data-r>
+            <div className="faces">{FEATURE.map((n) => <img key={n.src} src={n.src} alt={n.name} loading="lazy" />)}</div>
+            <p className="muted" style={{ maxWidth: 360 }}>444 hand-styled mice. Mint date and price will be announced; the whitelist is open now.</p>
           </div>
         </div>
       </section>
 
-      {/* GAME — night */}
-      <section className="sec">
+      {/* ARCADE — navy */}
+      <section className="sec navy">
         <div className="wrap band">
           <div>
-            <span className="eyebrow" data-r>Play to earn points</span>
-            <h2 className="sec-h" data-r>Cheese Chase is <em>live.</em></h2>
-            <p className="sec-p" data-r>Run the neon rails of Cheese City in a full 3D runner. Every run earns Cheese and Squeaks points, and your best score lands on the leaderboard.</p>
-            <div className="hero-cta" data-r><Link href="/play" className="btn btn-play btn-big">Play now <span className="arr">→</span></Link></div>
+            <span className="eyebrow" data-r>Squeaks arcade</span>
+            <h2 className="sec-h" data-r>The arcade is <em>open.</em></h2>
+            <p className="sec-p" data-r>Start with Cheese Chase, a full 3D runner through Cheese City. Every run earns Cheese and Squeaks points; more games are on the way.</p>
+            <div className="hero-cta" data-r><Link href="/play" className="btn btn-play btn-big">Enter the arcade <span className="arr">→</span></Link></div>
             <div className="mini" data-r>
               <Link href="/mine"><b>Cheese Mine</b><span>24-hour sessions</span></Link>
               <Link href="/rewards"><b>Daily rewards</b><span>Streaks and missions</span></Link>
@@ -184,9 +181,9 @@ export default function Home() {
           <div className="cx" data-r>
             <div className="pic"><img src="/mice/cardicx.webp" alt="" loading="lazy" /></div>
             <div>
-              <h3 style={{ fontSize: "clamp(20px, 2.4vw, 26px)" }}>One account across Squeaks and CardicX</h3>
+              <h3 style={{ fontSize: "clamp(20px, 2.4vw, 26px)" }}>The official token of CardicX</h3>
               <p className="muted" style={{ marginTop: 8 }}>
-                <a className="lnk" href={CARDICX} target="_blank" rel="noreferrer">CardicX</a> brings the trading tools and AI guidance; Squeaks brings the culture and rewards. Points land in the CardicX Rewards Center, counted once.
+                {TOKEN.ticker} is the official token of <a className="lnk" href={CARDICX} target="_blank" rel="noreferrer">CardicX</a>. Your Squeaks points and rewards are redeemable in the CardicX Rewards Center, all on one account.
               </p>
             </div>
             <a className="btn btn-cx" href={CARDICX} target="_blank" rel="noreferrer">Open CardicX ↗</a>

@@ -1,7 +1,7 @@
 "use client";
 /* eslint-disable @next/next/no-img-element */
 import { useState } from "react";
-import { PageHead, Price, Shell } from "@/components/ui";
+import { PageHead, Price, Shell, GameNav } from "@/components/ui";
 import { buy, equip, ITEMS, priceOf, TESTING, toast, useGame, type Cat } from "@/lib/store";
 
 const CATS: Cat[] = ["Skins", "Hats", "Trails", "Boosts"];
@@ -10,10 +10,11 @@ export default function Shop() {
   const g = useGame();
   const [cat, setCat] = useState<Cat>("Skins");
   return (
-    <Shell>
+    <Shell theme="game">
       <PageHead eyebrow="Shop" title={<>Dress the <span className="yel">mouse</span></>} img="space">
         Skins, hats and trails show up in Cheese Chase. Boosts are used one per run. {TESTING ? "Everything is free during testing." : "Paid for with Cheese."}
       </PageHead>
+      <section className="wrap" style={{ paddingBottom: 0 }}><GameNav /></section>
       <section className="wrap">
         <div className="tabs">
           {CATS.map((c) => <button key={c} className={`tab${c === cat ? " on" : ""}`} onClick={() => setCat(c)}>{c}</button>)}

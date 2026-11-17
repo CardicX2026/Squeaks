@@ -2,11 +2,31 @@
 // Update here and every page follows.
 
 export const CARDICX = "https://cardicx.com";
+// From the Squeaks docs FAQ
 export const SOCIALS = [
-  { n: "Telegram", h: "https://t.me/" },
-  { n: "X", h: "https://x.com/" },
-  { n: "Discord", h: "https://discord.com/" },
-]; // TODO: real community links
+  { n: "Telegram", h: "https://t.me/squeaks_official", i: "tg" },
+  { n: "X", h: "https://x.com/squeaksfun", i: "x" },
+  { n: "Instagram", h: "https://instagram.com/squeaksfun", i: "ig" },
+  { n: "Zealy", h: "https://zealy.io/cw/squeaksfun", i: "zealy" },
+];
+
+/** CDXLIV mint status, per the docs FAQ. Fill in when announced. */
+export const MINT = {
+  status: "Whitelist open",
+  date: "",        // e.g. "March 2027"
+  price: "",       // e.g. "0.5 SOL"
+  marketplaces: [] as { n: string; h: string }[], // e.g. [{ n: "Magic Eden", h: "https://..." }]
+};
+
+/**
+ * Arcade cards. Drop artwork at the `img` path (public/games/...) and it appears;
+ * until then the card uses `fallback` or a styled placeholder.
+ */
+export const GAMES = [
+  { id: "cheese-chase", name: "Cheese Chase", desc: "Run the neon rails of Cheese City. Dodge, jump, slide and stack Cheese.", img: "/games/cheese-chase.webp", fallback: "/mice/chase.webp", href: "/play/cheese-chase", live: true },
+  { id: "slot-2", name: "Coming soon", desc: "A new Squeaks game is in the oven. Follow along for the reveal.", img: "/games/slot-2.webp", fallback: "", href: "", live: false },
+  { id: "slot-3", name: "Coming soon", desc: "Another one for the crew. Seasons and prizes to match.", img: "/games/slot-3.webp", fallback: "", href: "", live: false },
+];
 
 export const DOCS = "https://squeaksfun.gitbook.io/squeaks";
 export const DOCS_NFT = `${DOCS}/about-squeaks/ecosystem/cdxliv-nfts-and-membership`;

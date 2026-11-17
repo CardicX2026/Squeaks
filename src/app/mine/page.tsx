@@ -1,7 +1,7 @@
 "use client";
 /* eslint-disable @next/next/no-img-element */
 import { useEffect, useState } from "react";
-import { Cheese, fmt, PageHead, Price, Shell } from "@/components/ui";
+import { Cheese, fmt, PageHead, Price, Shell, GameNav } from "@/components/ui";
 import {
   MINE_HOURS, MINE_MAX_LEVEL, REF_BONUS, TESTING, mineCollect, mineProgress, mineRate, mineSkip, mineStart,
   mineUpgrade, mineUpgradeCost, mineYield, toast, useGame,
@@ -23,10 +23,11 @@ export default function Mine() {
   const link = typeof window === "undefined" || !g.handle ? "" : `${window.location.origin}/?ref=${g.handle}`;
 
   return (
-    <Shell>
+    <Shell theme="game">
       <PageHead eyebrow="Mine" title={<>The Cheese <span className="yel">Mine</span></>} img="chef">
         Send your crew down for {MINE_HOURS} hours. When the session ends, collect the Cheese and start the next one.
       </PageHead>
+      <section className="wrap" style={{ paddingBottom: 0 }}><GameNav /></section>
       <section className="wrap two">
         <div className="mine">
           <div className="row">
