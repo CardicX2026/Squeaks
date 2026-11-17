@@ -64,9 +64,10 @@ export default function CheeseChase() {
       // equipped shop skin, if it has a 3D model; otherwise the default mouse
       const skinUrl = item(getGame().equip.Skins)?.model;
       const url = skinUrl || undefined; // a missing file falls back to the default mouse
-      const [model, props] = await Promise.all([m.preloadMouse((p) => !dead && setLoad(Math.min(0.99, p)), url), m.preloadProps()]);
+      const [model, props, decor] = await Promise.all([m.preloadMouse((p) => !dead && setLoad(Math.min(0.99, p)), url), m.preloadProps(), m.preloadDecor()]);
       if (dead) return;
       e.setProps(props);
+      e.setDecor(decor);
       e.setMouse(model);
       setLoad(1);
     });

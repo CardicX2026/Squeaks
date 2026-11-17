@@ -101,6 +101,32 @@ export function preloadProps() {
   return propsPromise;
 }
 
+export type Decor = Partial<Record<"water_tank" | "kiosk" | "vending" | "crates" | "hydrant", THREE.Object3D>>;
+const DECOR_H = { water_tank: 3.2, kiosk: 2.6, vending: 2.1, crates: 1.5, hydrant: 0.9 } as const;
+let decorPromise: Promise<Decor> | null = null;
+/** Optional Meshy city props in /models/decor, scaled to game height and standing on the ground. */
+export function preloadDecor() {
+  if (!decorPromise) decorPromise = (async () => {
+    const loader = new GLTFLoader();
+    loader.setMeshoptDecoder(MeshoptDecoder);
+    const out: Decor = {};
+    await Promise.all((Object.keys(DECOR_H) as (keyof typeof DECOR_H)[]).map(async (k) => {
+      try {
+        const o = (await loader.loadAsync(`/models/decor/${k}.glb`)).scene;
+        let box = new THREE.Box3().setFromObject(o);
+        o.scale.multiplyScalar(DECOR_H[k] / box.getSize(new THREE.Vector3()).y);
+        box = new THREE.Box3().setFromObject(o);
+        const c = box.getCenter(new THREE.Vector3());
+        o.position.set(-c.x, -box.min.y, -c.z);
+        const wrap = new THREE.Group(); wrap.add(o);
+        out[k] = wrap;
+      } catch { /* optional */ }
+    }));
+    return out;
+  })();
+  return decorPromise;
+}
+
 /* ---------- textures drawn in code ---------- */
 function canvasTex(w: number, h: number, draw: (c: CanvasRenderingContext2D) => void) {
   const c = document.createElement("canvas");
@@ -210,6 +236,28 @@ export class Runner3D {
   private busy = [0, 0, 0];
   private trainMats: { side: THREE.Material; front: THREE.Material; body: THREE.Material }[] = [];
   private onPickup?: (x: number, y: number) => void;
+  private street: THREE.Object3D[] = [];
+  /** Place city props: water towers on some rooftops, shops and street furniture along both sidewalks. */
+  setDecor(d: Decor) {
+    if (d.water_tank) for (const b of this.buildings) {
+      if (Math.random() > 0.45) continue;
+      const { w, h, d: dep } = b.g.userData as { w: number; h: number; d: number };
+      const t = d.water_tank.clone();
+      t.position.set(rnd(-w / 2 + 1.4, w / 2 - 1.4), h, rnd(-dep / 2 + 1.4, dep / 2 - 1.4));
+      t.rotation.y = rnd(0, Math.PI);
+      b.g.add(t);
+    }
+    const kinds = (["kiosk", "vending", "crates", "hydrant"] as const).filter((k) => d[k]);
+    if (!kinds.length) return;
+    for (const side of [-1, 1]) for (let i = 0; i < 16; i++) {
+      const k = kinds[(i * 3 + (side > 0 ? 1 : 0)) % kinds.length];
+      const o = d[k]!.clone();
+      o.position.set(side * (k === "hydrant" ? 5.1 : 6.25), 0, 14 - i * 15 + rnd(-3, 3));
+      o.rotation.y = -side * Math.PI / 2 + (k === "crates" ? rnd(-0.4, 0.4) : 0);
+      this.scene.add(o);
+      this.street.push(o);
+    }
+  }
   private objs: Obj[] = [];
   private geo: Record<string, THREE.BufferGeometry> = {};
   private mat: Record<string, THREE.Material> = {};
@@ -449,15 +497,15 @@ export class Runner3D {
 
     // ---------- trackside walls with original murals ----------
     const murals = [0, 1, 2, 3, 4, 5].map((v) => muralTex(v));
-    const wallGeo = new THREE.BoxGeometry(0.4, 1.5, WALL);
+    const wallGeo = new THREE.BoxGeometry(0.4, 1.1, WALL);
     const capGeo = new THREE.BoxGeometry(0.55, 0.12, WALL);
     const capMat = new THREE.MeshStandardMaterial({ color: 0x8e95ad, roughness: 0.7 });
     for (const side of [-1, 1]) for (let i = 0; i < 22; i++) {
       const g = new THREE.Group();
       const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, map: murals[(i * 7 + (side + 1)) % murals.length], roughness: 0.8 });
       const w = new THREE.Mesh(wallGeo, [mat, mat, capMat, capMat, capMat, capMat]);
-      w.position.y = 0.75;
-      const cap = new THREE.Mesh(capGeo, capMat); cap.position.y = 1.56;
+      w.position.y = 0.55;
+      const cap = new THREE.Mesh(capGeo, capMat); cap.position.y = 1.16;
       g.add(w, cap);
       g.position.set(side * (LANE * 1.5 + 1.05), 0, 20 - WALL / 2 - i * WALL);
       s.add(g);
@@ -507,6 +555,7 @@ export class Runner3D {
           sign.rotation.y = -side * Math.PI / 2;
           g.add(sign);
         }
+        g.userData = { w, h, d };
         g.position.set(side * (7 + w / 2), 0, z - d / 2);
         this.scene.add(g);
         this.buildings.push({ g, d, side });
@@ -792,6 +841,7 @@ export class Runner3D {
       }
     }
     for (const l of this.lamps) { l.position.z += dz; if (l.position.z > 16) l.position.z -= 14 * 12; }
+    for (const o of this.street) { o.position.z += dz; if (o.position.z > 18) o.position.z -= 16 * 15; }
 
     // player physics
     const tx = lx(this.lane);

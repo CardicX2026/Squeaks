@@ -17,6 +17,12 @@ const JOBS = {
   // props: text -> low-poly textured mesh
   "cheese": { kind: "prop", poly: 2500, prompt: "a single chunky wedge of yellow swiss cheese with round holes, stylized cartoon game collectible, smooth clean shapes, glossy" },
   "pod": { kind: "prop", poly: 6000, prompt: "a futuristic rounded cargo pod vehicle on rails, long capsule shape, teal and white panels with glowing cyan light strips, round headlights at the front, stylized cartoon game asset" },
+  // city decoration (placed along the street and on rooftops)
+  "water_tank": { kind: "prop", dir: "decor", poly: 3000, prompt: "a rooftop wooden water tower tank on four metal legs with a conical roof, stylized cartoon city game asset, warm wood and dark metal" },
+  "kiosk": { kind: "prop", dir: "decor", poly: 4000, prompt: "a small street snack kiosk booth with an orange striped awning, glowing menu board and a serving window, stylized cartoon city game asset" },
+  "vending": { kind: "prop", dir: "decor", poly: 3000, prompt: "a cheese vending machine with a glowing front panel showing cheese wedges, yellow and navy body, stylized cartoon city game asset" },
+  "crates": { kind: "prop", dir: "decor", poly: 2500, prompt: "a stack of three wooden cargo crates with metal corners, stylized cartoon game asset" },
+  "hydrant": { kind: "prop", dir: "decor", poly: 2000, prompt: "a chunky red fire hydrant, stylized cartoon city street game asset, glossy" },
   "barrier": { kind: "prop", poly: 2500, prompt: "a low striped road barrier, yellow and dark navy diagonal stripes on a wide plank with two short metal legs, stylized cartoon game obstacle" },
 };
 
@@ -57,7 +63,7 @@ async function skin(name, j) {
 async function prop(name, j) {
   const pre = await task("/v2/text-to-3d", { mode: "preview", prompt: j.prompt, should_remesh: true, topology: "triangle", target_polycount: j.poly }, "preview");
   const ref = await task("/v2/text-to-3d", { mode: "refine", preview_task_id: pre.id, texture_resolution: "2k" }, "refine");
-  await save(ref.model_urls.glb, `public/models/props/${name}.glb`);
+  await save(ref.model_urls.glb, `public/models/${j.dir ?? "props"}/${name}.glb`);
 }
 
 const names = process.argv.slice(2).length ? process.argv.slice(2) : Object.keys(JOBS);
