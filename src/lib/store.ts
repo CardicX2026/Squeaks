@@ -258,3 +258,11 @@ export function claimMission(id: string) {
   return ok;
 }
 export function resetAll() { set(() => ({ ...DEF, day: freshDay() })); }
+
+/* ---- signed-in account (server is the source of truth when logged in) ---- */
+export type AccountState = { handle: string | null; cheese: number; points: number; best_score: number } | null;
+let account: AccountState = null;
+const aSubs = new Set<() => void>();
+export function setAccount(a: AccountState) { account = a ? { handle: a.handle, cheese: a.cheese, points: a.points, best_score: a.best_score } : null; aSubs.forEach((f) => f()); }
+export const useAccountState = () =>
+  useSyncExternalStore((f) => { aSubs.add(f); return () => { aSubs.delete(f); }; }, () => account, () => null);
