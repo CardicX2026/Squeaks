@@ -95,6 +95,7 @@ export class Runner3D {
   private raf = 0;
   private last = performance.now();
   private mode: "idle" | "run" | "dying" | "over" = "idle";
+  paused = false;
   private onHud: (score: number, cheese: number) => void;
   private onEnd: (score: number, cheese: number) => void;
 
@@ -563,6 +564,7 @@ export class Runner3D {
   };
 
   private update(dt: number) {
+    if (this.paused) return;
     const running = this.mode === "run";
     if (this.mode === "idle") this.speed = 7;
     if (running) {

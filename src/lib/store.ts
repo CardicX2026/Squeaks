@@ -132,6 +132,18 @@ export function setRef(r: string) {
   if (ref) set((s) => (s.ref || s.handle === ref ? s : { ...s, ref }));
 }
 
+/** Spend one of each chosen booster (only those you own). */
+export function spendBoosts(ids: string[]) {
+  const b = getGame().boosts;
+  const ok = ids.filter((id) => (b[id] ?? 0) > 0);
+  set((s) => {
+    const nb = { ...s.boosts };
+    for (const id of ok) nb[id] -= 1;
+    return { ...s, boosts: nb };
+  });
+  return { magnet: ok.includes("boost_magnet"), double: ok.includes("boost_double"), head: ok.includes("boost_head") };
+}
+
 export function takeBoosts() {
   const b = getGame().boosts;
   const used = { magnet: (b.boost_magnet ?? 0) > 0, double: (b.boost_double ?? 0) > 0, head: (b.boost_head ?? 0) > 0 };

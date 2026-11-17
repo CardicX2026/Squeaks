@@ -150,37 +150,39 @@ export function Shell({ children, theme = "site" }: { children: ReactNode; theme
         <SnowCap />
       </nav>
       <main>{children}</main>
+      {theme === "site" && (
       <footer className="navy">
-        <div className="wrap">
-          <div className="ftop">
-            <div>
-              <span className="logo"><span className="logo-av"><img src="/nft/n11.webp" alt="" /></span>Squeaks</span>
-              <h2 style={{ marginTop: 22 }}>The official token of <span className="yel">CardicX.</span></h2>
-              <p className="muted">Meme culture with real products behind it. Squeaks rewards are redeemable in the CardicX Rewards Center.</p>
-            </div>
-            <div>
-              <div className="socials">
-                {SOCIALS.map((s) => <a key={s.n} href={s.h} target="_blank" rel="noreferrer" className="soc" aria-label={s.n} title={s.n}><SocialIcon i={s.i} /></a>)}
+          <div className="wrap">
+            <div className="ftop">
+              <div>
+                <span className="logo"><span className="logo-av"><img src="/nft/n11.webp" alt="" /></span>Squeaks</span>
+                <h2 style={{ marginTop: 22 }}>The official token of <span className="yel">CardicX.</span></h2>
+                <p className="muted">Meme culture with real products behind it. Squeaks rewards are redeemable in the CardicX Rewards Center.</p>
               </div>
-              <div className="hero-cta" style={{ justifyContent: "inherit", marginTop: 18 }}>
-                <a href={SOCIALS[0].h} target="_blank" rel="noreferrer" className="btn btn-play">Join the whitelist</a>
-                <a href={CARDICX} target="_blank" rel="noreferrer" className="btn btn-cx">Open CardicX ↗</a>
+              <div>
+                <div className="socials">
+                  {SOCIALS.map((s) => <a key={s.n} href={s.h} target="_blank" rel="noreferrer" className="soc" aria-label={s.n} title={s.n}><SocialIcon i={s.i} /></a>)}
+                </div>
+                <div className="hero-cta" style={{ justifyContent: "inherit", marginTop: 18 }}>
+                  <a href={SOCIALS[0].h} target="_blank" rel="noreferrer" className="btn btn-play">Join the whitelist</a>
+                  <a href={CARDICX} target="_blank" rel="noreferrer" className="btn btn-cx">Open CardicX ↗</a>
+                </div>
               </div>
             </div>
+            <div className="foot" style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>
+              <div className="fcol"><b>$SQKS</b><Link href="/token">Token</Link><Link href="/token">Squeakonomics</Link><a href={DOCS} target="_blank" rel="noreferrer">Docs ↗</a></div>
+              <div className="fcol"><b>CDXLIV</b><Link href="/nfts">Collection</Link><Link href="/nfts#mint">Mint & whitelist</Link><Link href="/nfts">Membership perks</Link></div>
+              <div className="fcol"><b>Arcade</b><Link href="/play">Games</Link><Link href="/mine">Cheese Mine</Link><Link href="/shop">Shop</Link><Link href="/leaderboard">Leaderboard</Link></div>
+              <div className="fcol"><b>Community</b>{SOCIALS.map((s) => <a key={s.n} href={s.h} target="_blank" rel="noreferrer">{s.n} ↗</a>)}</div>
+            </div>
+            <p className="legal">
+              $SQKS is a community token. Nothing on this site is financial advice, an offer, or a promise of value, price or returns. Cheese and Squeaks points are in-game balances with no cash value.
+              Crypto assets are volatile; only take part with what you can afford to lose, and check that it is allowed where you live.
+            </p>
+            <div className="copy-row"><span>© {new Date().getFullYear()} Squeaks. All rights reserved.</span><span>Built on Solana · Part of the CardicX ecosystem</span></div>
           </div>
-          <div className="foot" style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>
-            <div className="fcol"><b>$SQKS</b><Link href="/token">Token</Link><Link href="/token">Squeakonomics</Link><a href={DOCS} target="_blank" rel="noreferrer">Docs ↗</a></div>
-            <div className="fcol"><b>CDXLIV</b><Link href="/nfts">Collection</Link><Link href="/nfts#mint">Mint & whitelist</Link><Link href="/nfts">Membership perks</Link></div>
-            <div className="fcol"><b>Arcade</b><Link href="/play">Games</Link><Link href="/mine">Cheese Mine</Link><Link href="/shop">Shop</Link><Link href="/leaderboard">Leaderboard</Link></div>
-            <div className="fcol"><b>Community</b>{SOCIALS.map((s) => <a key={s.n} href={s.h} target="_blank" rel="noreferrer">{s.n} ↗</a>)}</div>
-          </div>
-          <p className="legal">
-            $SQKS is a community token. Nothing on this site is financial advice, an offer, or a promise of value, price or returns. Cheese and Squeaks points are in-game balances with no cash value.
-            Crypto assets are volatile; only take part with what you can afford to lose, and check that it is allowed where you live.
-          </p>
-          <div className="copy-row"><span>© {new Date().getFullYear()} Squeaks. All rights reserved.</span><span>Built on Solana · Part of the CardicX ecosystem</span></div>
-        </div>
-      </footer>
+        </footer>
+      )}
       <div className="tabbar">
         {TABS.map((x) => (
           <Link key={x.h} href={x.h} className={on(x.h) ? "on" : ""}>
