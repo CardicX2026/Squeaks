@@ -50,6 +50,7 @@ export function CountUp({ to, dur = 1400, suffix = "" }: { to: number; dur?: num
     const el = ref.current;
     if (!el) return;
     let raf = 0;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) { setV(to); return; }
     const io = new IntersectionObserver(([e]) => {
       if (!e.isIntersecting) return;
       io.disconnect();

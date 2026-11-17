@@ -29,8 +29,8 @@ export default function Nfts() {
         CDXLIV is the first Squeaks collection: 444 hand-styled mice that work as a collectible and as permanent membership across Squeaks and CardicX.
       </PageHead>
 
-      <section className="wrap">
-        <div className="facts-grid" data-r style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>
+      <section className="wrap" style={{ paddingBottom: "clamp(56px, 8vw, 96px)" }}>
+        <div className="facts-grid four" data-r>
           <div><span>Collection</span><b>CDXLIV</b></div>
           <div><span>Supply</span><b><CountUp to={444} /></b></div>
           <div><span>OG allocation</span><b>5% of {TOKEN.ticker}</b></div>
@@ -38,7 +38,8 @@ export default function Nfts() {
         </div>
       </section>
 
-      <section className="sec wrap">
+      <section className="sec light">
+        <div className="wrap">
         <div className="sec-head">
           <span className="eyebrow" data-r>Holder benefits</span>
           <h2 className="sec-h" data-r>More than a <em>profile picture.</em></h2>
@@ -52,15 +53,17 @@ export default function Nfts() {
             </div>
           ))}
         </div>
+        </div>
       </section>
 
-      <section className="wrap" style={{ paddingBottom: 60 }}>
+      <section className="sec peach">
+        <div className="wrap">
         <div className="row" style={{ marginBottom: 26 }}>
           <div>
             <span className="eyebrow" data-r>The collection</span>
             <h2 className="sec-h" data-r style={{ marginBottom: 0 }}>Meet a few of the <em>444.</em></h2>
           </div>
-          <a className="btn btn-ghost" href={DOCS_NFT} target="_blank" rel="noreferrer" data-r>Membership details ↗</a>
+          <a className="btn btn-dark" href={DOCS_NFT} target="_blank" rel="noreferrer" data-r>Membership details ↗</a>
         </div>
         <div className="gallery">
           {NFTS.map((x, i) => (
@@ -69,6 +72,7 @@ export default function Nfts() {
               <div className="meta">{x.name}<span>CDXLIV</span></div>
             </button>
           ))}
+        </div>
         </div>
       </section>
 
