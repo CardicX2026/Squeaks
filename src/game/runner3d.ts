@@ -13,13 +13,15 @@ import { RenderPass } from "three/examples/jsm/postprocessing/RenderPass.js";
 import { UnrealBloomPass } from "three/examples/jsm/postprocessing/UnrealBloomPass.js";
 import { OutputPass } from "three/examples/jsm/postprocessing/OutputPass.js";
 import * as SkeletonUtils from "three/examples/jsm/utils/SkeletonUtils.js";
+import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 
 export type Action = "l" | "r" | "j" | "s";
 export type RunOpts = { trail: string; magnet: boolean; double: boolean; head: boolean };
 type Kind = "c" | "low" | "high" | "pod";
-type Obj = { k: Kind; l: number; m: THREE.Object3D; len: number; y: number; hit?: boolean };
+type Obj = { k: Kind; l: number; m: THREE.Object3D; len: number; y: number; hit?: boolean; ht?: number; vz?: number };
 
 export const MOUSE_URL = "/models/mouse.glb";
+const CAR = 9.5, CAR_GAP = 0.6, WALL = 12;
 const LANE = 2.2, SPAWN_Z = -140, MOUSE_H = 1.75, BOARD_TOP = 0.34, TRACK_LEN = 420;
 const lx = (l: number) => (l - 1) * LANE;
 const rnd = (a: number, b: number) => a + Math.random() * (b - a);
@@ -99,6 +101,32 @@ export function preloadProps() {
   return propsPromise;
 }
 
+export type Decor = Partial<Record<"water_tank" | "kiosk" | "vending" | "crates" | "hydrant", THREE.Object3D>>;
+const DECOR_H = { water_tank: 3.2, kiosk: 2.6, vending: 2.1, crates: 1.5, hydrant: 0.9 } as const;
+let decorPromise: Promise<Decor> | null = null;
+/** Optional Meshy city props in /models/decor, scaled to game height and standing on the ground. */
+export function preloadDecor() {
+  if (!decorPromise) decorPromise = (async () => {
+    const loader = new GLTFLoader();
+    loader.setMeshoptDecoder(MeshoptDecoder);
+    const out: Decor = {};
+    await Promise.all((Object.keys(DECOR_H) as (keyof typeof DECOR_H)[]).map(async (k) => {
+      try {
+        const o = (await loader.loadAsync(`/models/decor/${k}.glb`)).scene;
+        let box = new THREE.Box3().setFromObject(o);
+        o.scale.multiplyScalar(DECOR_H[k] / box.getSize(new THREE.Vector3()).y);
+        box = new THREE.Box3().setFromObject(o);
+        const c = box.getCenter(new THREE.Vector3());
+        o.position.set(-c.x, -box.min.y, -c.z);
+        const wrap = new THREE.Group(); wrap.add(o);
+        out[k] = wrap;
+      } catch { /* optional */ }
+    }));
+    return out;
+  })();
+  return decorPromise;
+}
+
 /* ---------- textures drawn in code ---------- */
 function canvasTex(w: number, h: number, draw: (c: CanvasRenderingContext2D) => void) {
   const c = document.createElement("canvas");
@@ -122,6 +150,56 @@ function windowTex(i: number) {
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
   return t;
 }
+/** Original trackside murals: colour blocks, cheese wedges, stars and SQKS tags. */
+function muralTex(v: number) {
+  const pal = [["#2b3a8f", "#f28c3f", "#ffc83d", "#7ed9bc"], ["#5a2a7a", "#f5a3a7", "#ffc83d", "#7393cc"], ["#1f5f66", "#ffc83d", "#f28c3f", "#fff7ee"], ["#3a2f5c", "#7ed9bc", "#f5a3a7", "#ffc83d"]][v % 4];
+  const t = canvasTex(512, 64, (c) => {
+    c.fillStyle = pal[0]; c.fillRect(0, 0, 512, 64);
+    for (let i = 0; i < 7; i++) { c.fillStyle = pal[1 + (i % 3)]; c.globalAlpha = 0.35; c.beginPath(); c.arc(Math.random() * 512, Math.random() * 64, 14 + Math.random() * 30, 0, 7); c.fill(); }
+    c.globalAlpha = 1;
+    for (let i = 0; i < 4; i++) {
+      const x = 40 + i * 120 + Math.random() * 30, y = 18 + Math.random() * 20;
+      c.fillStyle = pal[2]; c.beginPath(); c.moveTo(x, y + 20); c.lineTo(x + 34, y + 20); c.lineTo(x + 34, y + 4); c.lineTo(x + 10, y - 4); c.closePath(); c.fill();
+      c.fillStyle = "rgba(0,0,0,.25)"; c.beginPath(); c.arc(x + 22, y + 11, 3.5, 0, 7); c.arc(x + 12, y + 15, 2.5, 0, 7); c.fill();
+    }
+    c.font = "bold 30px system-ui, sans-serif"; c.lineWidth = 6; c.strokeStyle = "#141833"; c.fillStyle = pal[1];
+    const tx = 120 + (v * 73) % 260;
+    c.strokeText(v % 2 ? "SQKS" : "CHEESE", tx, 46); c.fillText(v % 2 ? "SQKS" : "CHEESE", tx, 46);
+    c.fillStyle = "rgba(0,0,0,.35)"; c.fillRect(0, 56, 512, 8);
+  });
+  t.wrapS = THREE.RepeatWrapping;
+  return t;
+}
+
+/** Train side livery (original "SQKS Line" design): windows, doors, stripe and logo. */
+function liveryTex(body: string, accent: string) {
+  return canvasTex(1024, 224, (c) => {
+    c.fillStyle = body; c.fillRect(0, 0, 1024, 224);
+    c.fillStyle = "rgba(255,255,255,.18)"; c.fillRect(0, 0, 1024, 10);
+    c.fillStyle = accent; c.fillRect(0, 150, 1024, 22);
+    c.fillStyle = "#11152e"; c.fillRect(0, 172, 1024, 6);
+    const door = (x: number) => { c.fillStyle = "#1b2140"; c.fillRect(x, 40, 92, 176); c.fillStyle = "#0b0f22"; c.fillRect(x + 8, 50, 34, 80); c.fillRect(x + 50, 50, 34, 80); c.fillStyle = "rgba(255,230,170,.35)"; c.fillRect(x + 10, 52, 30, 30); c.fillRect(x + 52, 52, 30, 30); c.fillStyle = accent; c.fillRect(x + 44, 40, 4, 176); };
+    for (let i = 0; i < 9; i++) {
+      const x = 20 + i * 112;
+      if (i === 2 || i === 6) { door(x); continue; }
+      c.fillStyle = "#0b0f22"; c.beginPath(); c.roundRect(x, 46, 90, 78, 10); c.fill();
+      c.fillStyle = "rgba(255,225,160,.28)"; c.beginPath(); c.roundRect(x + 4, 50, 82, 30, 8); c.fill();
+      c.fillStyle = "rgba(255,255,255,.18)"; c.fillRect(x + 10, 54, 20, 60);
+    }
+    c.font = "bold 34px system-ui, sans-serif"; c.fillStyle = "#11152e"; c.fillText("SQKS LINE", 760, 205);
+  });
+}
+function trainFrontTex(accent: string) {
+  return canvasTex(256, 320, (c) => {
+    c.fillStyle = "#1a1f3d"; c.beginPath(); c.roundRect(0, 0, 256, 320, 30); c.fill();
+    c.fillStyle = "#0a0d1f"; c.beginPath(); c.roundRect(22, 40, 212, 130, 20); c.fill();
+    c.fillStyle = "rgba(160,200,255,.22)"; c.beginPath(); c.moveTo(40, 160); c.lineTo(110, 50); c.lineTo(140, 50); c.lineTo(70, 160); c.fill();
+    c.fillStyle = "#ff9a3c"; c.font = "bold 22px system-ui, sans-serif"; c.textAlign = "center"; c.fillText("CHEESE CITY", 128, 28);
+    c.fillStyle = accent; c.fillRect(0, 196, 256, 26);
+    c.fillStyle = "#2a3050"; for (let i = 0; i < 5; i++) c.fillRect(70 + i * 24, 250, 14, 44);
+  });
+}
+
 function signTex(text: string, color: string) {
   return canvasTex(512, 192, (c) => {
     c.fillStyle = "rgba(8,10,30,.85)"; c.beginPath(); c.roundRect(8, 8, 496, 176, 40); c.fill();
@@ -151,6 +229,35 @@ export class Runner3D {
   private buildings: { g: THREE.Group; d: number; side: number }[] = [];
   private farZ: Record<number, number> = { [-1]: 0, [1]: 0 };
   private lamps: THREE.Group[] = [];
+  private sleepers!: THREE.Group;
+  private walls: THREE.Group[] = [];
+  private bridges: THREE.Group[] = [];
+  private dist = 0;
+  private busy = [0, 0, 0];
+  private trainMats: { side: THREE.Material; front: THREE.Material; body: THREE.Material }[] = [];
+  private onPickup?: (x: number, y: number) => void;
+  private street: THREE.Object3D[] = [];
+  /** Place city props: water towers on some rooftops, shops and street furniture along both sidewalks. */
+  setDecor(d: Decor) {
+    if (d.water_tank) for (const b of this.buildings) {
+      if (Math.random() > 0.45) continue;
+      const { w, h, d: dep } = b.g.userData as { w: number; h: number; d: number };
+      const t = d.water_tank.clone();
+      t.position.set(rnd(-w / 2 + 1.4, w / 2 - 1.4), h, rnd(-dep / 2 + 1.4, dep / 2 - 1.4));
+      t.rotation.y = rnd(0, Math.PI);
+      b.g.add(t);
+    }
+    const kinds = (["kiosk", "vending", "crates", "hydrant"] as const).filter((k) => d[k]);
+    if (!kinds.length) return;
+    for (const side of [-1, 1]) for (let i = 0; i < 16; i++) {
+      const k = kinds[(i * 3 + (side > 0 ? 1 : 0)) % kinds.length];
+      const o = d[k]!.clone();
+      o.position.set(side * (k === "hydrant" ? 5.1 : 6.25), 0, 14 - i * 15 + rnd(-3, 3));
+      o.rotation.y = -side * Math.PI / 2 + (k === "crates" ? rnd(-0.4, 0.4) : 0);
+      this.scene.add(o);
+      this.street.push(o);
+    }
+  }
   private objs: Obj[] = [];
   private geo: Record<string, THREE.BufferGeometry> = {};
   private mat: Record<string, THREE.Material> = {};
@@ -173,9 +280,9 @@ export class Runner3D {
   private speed = 8; private t = 0; private next = 0; private score = 0; private cheese = 0;
   private dieT = 0; private opts: RunOpts = { trail: "", magnet: false, double: false, head: false };
 
-  constructor(el: HTMLElement, cb: { onHud: (s: number, c: number) => void; onEnd: (s: number, c: number) => void }) {
+  constructor(el: HTMLElement, cb: { onHud: (s: number, c: number) => void; onEnd: (s: number, c: number) => void; onPickup?: (x: number, y: number) => void }) {
     this.el = el;
-    this.onHud = cb.onHud; this.onEnd = cb.onEnd;
+    this.onHud = cb.onHud; this.onEnd = cb.onEnd; this.onPickup = cb.onPickup;
     this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -248,6 +355,7 @@ export class Runner3D {
     this.objs = [];
     this.opts = opts;
     this.lane = 1; this.px = 0; this.py = 0; this.vy = 0; this.slide = 0;
+    this.dist = 0; this.busy = [0, 0, 0];
     this.speed = 22; this.t = 0; this.next = 30; this.cheese = 0; this.score = opts.head ? 500 : 0;
     this.setTrail(opts.trail);
     this.mode = "run";
@@ -349,32 +457,76 @@ export class Runner3D {
       s.add(b);
     }
 
-    // ground, street lines, track bed
-    const ground = new THREE.Mesh(new THREE.PlaneGeometry(220, TRACK_LEN), new THREE.MeshStandardMaterial({ color: 0x0c0f2e, roughness: 0.95 }));
+    // ---------- ground, ballast, sleepers, steel rails ----------
+    const ground = new THREE.Mesh(new THREE.PlaneGeometry(220, TRACK_LEN), new THREE.MeshStandardMaterial({ color: 0x14173a, roughness: 0.95 }));
     ground.rotation.x = -Math.PI / 2; ground.position.set(0, -0.02, -TRACK_LEN / 2 + 20);
     s.add(ground);
-    this.trackTex = canvasTex(128, 128, (c) => {
-      c.fillStyle = "#121640"; c.fillRect(0, 0, 128, 128);
-      c.fillStyle = "#2c2f6b"; c.fillRect(0, 44, 128, 34);
-      c.fillStyle = "#3a3f86"; c.fillRect(0, 44, 128, 4);
+    this.trackTex = canvasTex(256, 256, (c) => {
+      c.fillStyle = "#1c1e30"; c.fillRect(0, 0, 256, 256);
+      for (let i = 0; i < 2200; i++) {
+        const v = 26 + Math.random() * 38;
+        c.fillStyle = `rgb(${v},${v + 4},${v + 18})`;
+        c.beginPath(); c.arc(Math.random() * 256, Math.random() * 256, 1 + Math.random() * 2.6, 0, 7); c.fill();
+      }
     });
     this.trackTex.wrapS = this.trackTex.wrapT = THREE.RepeatWrapping;
-    this.trackTex.repeat.set(1, TRACK_LEN / 1.5);
-    const bed = new THREE.Mesh(new THREE.PlaneGeometry(LANE * 3 + 1.2, TRACK_LEN), new THREE.MeshStandardMaterial({ map: this.trackTex, roughness: 0.9 }));
-    bed.rotation.x = -Math.PI / 2; bed.position.set(0, 0, -TRACK_LEN / 2 + 20);
+    this.trackTex.repeat.set(3, TRACK_LEN / 4);
+    const bed = new THREE.Mesh(new THREE.PlaneGeometry(LANE * 3 + 1.6, TRACK_LEN), new THREE.MeshStandardMaterial({ map: this.trackTex, roughness: 1 }));
+    bed.rotation.x = -Math.PI / 2; bed.position.set(0, 0.005, -TRACK_LEN / 2 + 20);
     s.add(bed);
-    const railMat = new THREE.MeshStandardMaterial({ color: 0x3a2400, emissive: 0xffb400, emissiveIntensity: 0.9, toneMapped: false });
-    const railGeo = new THREE.BoxGeometry(0.1, 0.12, TRACK_LEN);
-    for (let l = 0; l < 3; l++) for (const o of [-0.62, 0.62]) {
-      const r = new THREE.Mesh(railGeo, railMat);
-      r.position.set(lx(l) + o, 0.06, -TRACK_LEN / 2 + 20);
-      s.add(r);
+    // sleepers: one instanced mesh that shifts by (distance mod spacing) each frame
+    const SL = 1.2, NS = 200;
+    const sleeperMesh = new THREE.InstancedMesh(new THREE.BoxGeometry(1.75, 0.1, 0.3), new THREE.MeshStandardMaterial({ color: 0x5b6176, roughness: 0.85 }), NS * 3);
+    const mtx = new THREE.Matrix4();
+    for (let l = 0; l < 3; l++) for (let i = 0; i < NS; i++) { mtx.makeTranslation(lx(l), 0.05, 20 - i * SL); sleeperMesh.setMatrixAt(l * NS + i, mtx); }
+    this.sleepers = new THREE.Group();
+    this.sleepers.add(sleeperMesh);
+    s.add(this.sleepers);
+    // rails: foot, web and polished head (standard rail profile, scaled to the game)
+    const steel = new THREE.MeshStandardMaterial({ color: 0x8b93a8, metalness: 0.85, roughness: 0.32 });
+    const shine = new THREE.MeshBasicMaterial({ color: new THREE.Color(0x9aa6c4).multiplyScalar(0.55) });
+    const foot = new THREE.BoxGeometry(0.16, 0.03, TRACK_LEN), web = new THREE.BoxGeometry(0.045, 0.09, TRACK_LEN), head = new THREE.BoxGeometry(0.1, 0.065, TRACK_LEN), gleam = new THREE.BoxGeometry(0.05, 0.004, TRACK_LEN);
+    for (let l = 0; l < 3; l++) for (const o of [-0.55, 0.55]) {
+      const zc = -TRACK_LEN / 2 + 20, x = lx(l) + o;
+      const a = new THREE.Mesh(foot, steel); a.position.set(x, 0.115, zc);
+      const b = new THREE.Mesh(web, steel); b.position.set(x, 0.175, zc);
+      const c2 = new THREE.Mesh(head, steel); c2.position.set(x, 0.252, zc);
+      const d = new THREE.Mesh(gleam, shine); d.position.set(x, 0.287, zc);
+      s.add(a, b, c2, d);
     }
-    const curbMat = new THREE.MeshStandardMaterial({ color: 0x0a3a44, emissive: 0x38e8ff, emissiveIntensity: 0.8, toneMapped: false });
-    for (const side of [-1, 1]) {
-      const curb = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.2, TRACK_LEN), curbMat);
-      curb.position.set(side * (LANE * 1.5 + 0.7), 0.1, -TRACK_LEN / 2 + 20);
-      s.add(curb);
+
+    // ---------- trackside walls with original murals ----------
+    const murals = [0, 1, 2, 3, 4, 5].map((v) => muralTex(v));
+    const wallGeo = new THREE.BoxGeometry(0.4, 1.1, WALL);
+    const capGeo = new THREE.BoxGeometry(0.55, 0.12, WALL);
+    const capMat = new THREE.MeshStandardMaterial({ color: 0x8e95ad, roughness: 0.7 });
+    for (const side of [-1, 1]) for (let i = 0; i < 22; i++) {
+      const g = new THREE.Group();
+      const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, map: murals[(i * 7 + (side + 1)) % murals.length], roughness: 0.8 });
+      const w = new THREE.Mesh(wallGeo, [mat, mat, capMat, capMat, capMat, capMat]);
+      w.position.y = 0.55;
+      const cap = new THREE.Mesh(capGeo, capMat); cap.position.y = 1.16;
+      g.add(w, cap);
+      g.position.set(side * (LANE * 1.5 + 1.05), 0, 20 - WALL / 2 - i * WALL);
+      s.add(g);
+      this.walls.push(g);
+    }
+
+    // ---------- overhead bridges for scale ----------
+    for (let i = 0; i < 2; i++) {
+      const g = new THREE.Group();
+      const concrete = new THREE.MeshStandardMaterial({ color: 0x3a3f63, roughness: 0.8 });
+      const deck = new THREE.Mesh(new THREE.BoxGeometry(15, 0.9, 3.2), concrete); deck.position.y = 7.2;
+      g.add(deck);
+      for (const x of [-5.4, 5.4]) { const p = new THREE.Mesh(new THREE.BoxGeometry(0.9, 7, 0.9), concrete); p.position.set(x, 3.5, 0); g.add(p); }
+      const neonBar = new THREE.Mesh(new THREE.BoxGeometry(15, 0.1, 0.1), new THREE.MeshBasicMaterial({ color: new THREE.Color(0xf28c3f).multiplyScalar(2.2), toneMapped: false }));
+      neonBar.position.set(0, 6.72, 1.62); g.add(neonBar);
+      const sign = new THREE.Mesh(new THREE.PlaneGeometry(5.2, 0.8), new THREE.MeshBasicMaterial({ map: signTex("SQKS LINE", "#ffc83d"), transparent: true, toneMapped: false }));
+      sign.position.set(0, 7.2, 1.62); g.add(sign);
+      const rail = new THREE.Mesh(new THREE.BoxGeometry(15, 0.5, 0.08), concrete); rail.position.set(0, 7.9, 1.55); g.add(rail);
+      g.position.z = -90 - i * 110;
+      s.add(g);
+      this.bridges.push(g);
     }
 
     // buildings with lit windows, neon roof lines and signs
@@ -403,6 +555,7 @@ export class Runner3D {
           sign.rotation.y = -side * Math.PI / 2;
           g.add(sign);
         }
+        g.userData = { w, h, d };
         g.position.set(side * (7 + w / 2), 0, z - d / 2);
         this.scene.add(g);
         this.buildings.push({ g, d, side });
@@ -448,6 +601,79 @@ export class Runner3D {
     this.mat.glass = new THREE.MeshStandardMaterial({ color: 0x0a0d24, roughness: 0.15, metalness: 0.4 });
     this.mat.light = new THREE.MeshBasicMaterial({ color: new THREE.Color(0xfff2c0).multiplyScalar(3), toneMapped: false });
     this.geo.box = box;
+    // sharper obstacles: chevron boards and train liveries
+    const chevron = (a: string, b: string) => canvasTex(256, 64, (c) => {
+      c.fillStyle = a; c.fillRect(0, 0, 256, 64); c.fillStyle = b;
+      for (let i = -2; i < 10; i++) { c.beginPath(); c.moveTo(i * 32, 64); c.lineTo(i * 32 + 16, 64); c.lineTo(i * 32 + 48, 0); c.lineTo(i * 32 + 32, 0); c.fill(); }
+      c.strokeStyle = "rgba(255,255,255,.55)"; c.lineWidth = 4; c.strokeRect(2, 2, 252, 60);
+    });
+    this.mat.jump = new THREE.MeshStandardMaterial({ map: chevron("#ffc21a", "#151933"), roughness: 0.35, metalness: 0.1 });
+    this.mat.duck = new THREE.MeshStandardMaterial({ map: chevron("#f4f4f8", "#e5383b"), roughness: 0.35, metalness: 0.1 });
+    this.mat.metal = new THREE.MeshStandardMaterial({ color: 0xb8bfd2, metalness: 0.8, roughness: 0.3 });
+    this.mat.dark = new THREE.MeshStandardMaterial({ color: 0x1b2038, metalness: 0.5, roughness: 0.5 });
+    this.mat.amber = new THREE.MeshBasicMaterial({ color: new THREE.Color(0xffa31a).multiplyScalar(2.5), toneMapped: false });
+    this.mat.red = new THREE.MeshBasicMaterial({ color: new THREE.Color(0xff3b3b).multiplyScalar(2.5), toneMapped: false });
+    this.geo.board = new RoundedBoxGeometry(2.0, 0.42, 0.12, 3, 0.04);
+    this.geo.duck = new RoundedBoxGeometry(2.15, 0.5, 0.14, 3, 0.05);
+    this.geo.carBody = new RoundedBoxGeometry(1.9, 2.3, CAR, 4, 0.22);
+    this.geo.wheel = new THREE.CylinderGeometry(0.22, 0.22, 0.12, 18);
+    this.geo.lampDot = new THREE.SphereGeometry(0.07, 12, 8);
+    this.geo.head = new THREE.SphereGeometry(0.13, 16, 10);
+    for (const [body, accent] of [["#f5b82e", "#11152e"], ["#2bb3a3", "#ffc83d"], ["#f28c3f", "#fff7ee"], ["#4f74b8", "#ffc83d"]]) {
+      this.trainMats.push({
+        side: new THREE.MeshStandardMaterial({ map: liveryTex(body, accent), roughness: 0.4, metalness: 0.2 }),
+        front: new THREE.MeshStandardMaterial({ map: trainFrontTex(accent), roughness: 0.3, metalness: 0.2 }),
+        body: new THREE.MeshStandardMaterial({ color: body, roughness: 0.4, metalness: 0.25 }),
+      });
+    }
+  }
+
+  /** Jump barrier: top edge at ~1.0 (jump peak is ~1.94). */
+  private buildJump() {
+    const g = new THREE.Group();
+    const board = new THREE.Mesh(this.geo.board, this.mat.jump); board.position.y = 0.78; g.add(board);
+    for (const x of [-0.82, 0.82]) {
+      for (const dz of [-0.16, 0.16]) { const leg = new THREE.Mesh(this.geo.box, this.mat.metal); leg.scale.set(0.06, 0.82, 0.06); leg.position.set(x, 0.41, dz); leg.rotation.x = dz > 0 ? -0.18 : 0.18; g.add(leg); }
+      const footM = new THREE.Mesh(this.geo.box, this.mat.dark); footM.scale.set(0.16, 0.05, 0.5); footM.position.set(x, 0.025, 0); g.add(footM);
+    }
+    const lamp = new THREE.Mesh(this.geo.lampDot, this.mat.amber); lamp.position.set(0, 1.06, 0); g.add(lamp);
+    return g;
+  }
+  /** Duck gantry: board from 1.3 to 1.8 (sliding mouse is 1.1 tall). */
+  private buildDuck() {
+    const g = new THREE.Group();
+    for (const x of [-1.05, 1.05]) {
+      const post = new THREE.Mesh(this.geo.box, this.mat.metal); post.scale.set(0.12, 2.5, 0.12); post.position.set(x, 1.25, 0); g.add(post);
+      const footM = new THREE.Mesh(this.geo.box, this.mat.dark); footM.scale.set(0.3, 0.06, 0.4); footM.position.set(x, 0.03, 0); g.add(footM);
+      const l = new THREE.Mesh(this.geo.lampDot, this.mat.red); l.position.set(x, 2.56, 0); g.add(l);
+    }
+    const board = new THREE.Mesh(this.geo.duck, this.mat.duck); board.position.y = 1.55; g.add(board);
+    const top = new THREE.Mesh(this.geo.box, this.mat.metal); top.scale.set(2.2, 0.08, 0.08); top.position.y = 2.45; g.add(top);
+    return g;
+  }
+  /** A train of n cars (original SQKS Line design): 1.9 wide, ~2.7 tall, 9.5 long per car. */
+  private buildTrain(n: number, moving: boolean) {
+    const g = new THREE.Group();
+    const lv = this.trainMats[Math.floor(Math.random() * this.trainMats.length)];
+    const total = n * CAR + (n - 1) * CAR_GAP;
+    for (let i = 0; i < n; i++) {
+      const zc = total / 2 - CAR / 2 - i * (CAR + CAR_GAP);
+      const body = new THREE.Mesh(this.geo.carBody, lv.body); body.position.set(0, 1.5, zc); g.add(body);
+      for (const side of [-1, 1]) {
+        const panel = new THREE.Mesh(new THREE.PlaneGeometry(CAR - 0.5, 2.0), lv.side);
+        panel.position.set(side * 0.952, 1.45, zc); panel.rotation.y = side * Math.PI / 2; g.add(panel);
+      }
+      const under = new THREE.Mesh(this.geo.box, this.mat.dark); under.scale.set(1.6, 0.34, CAR - 1); under.position.set(0, 0.32, zc); g.add(under);
+      for (const bz of [-CAR * 0.32, CAR * 0.32]) for (const wx of [-0.62, 0.62]) for (const wz of [-0.45, 0.45]) {
+        const w = new THREE.Mesh(this.geo.wheel, this.mat.metal); w.rotation.z = Math.PI / 2; w.position.set(wx, 0.24, zc + bz + wz); g.add(w);
+      }
+      for (const az of [-CAR * 0.22, CAR * 0.22]) { const ac = new THREE.Mesh(this.geo.box, this.mat.metal); ac.scale.set(1.0, 0.16, 1.6); ac.position.set(0, 2.73, zc + az); g.add(ac); }
+      if (i < n - 1) { const cp = new THREE.Mesh(this.geo.box, this.mat.dark); cp.scale.set(0.3, 0.25, CAR_GAP + 0.3); cp.position.set(0, 0.7, zc - CAR / 2 - CAR_GAP / 2); g.add(cp); }
+    }
+    const front = new THREE.Mesh(new THREE.PlaneGeometry(1.7, 2.12), lv.front); front.position.set(0, 1.55, total / 2 + 0.012); g.add(front);
+    for (const x of [-0.55, 0.55]) { const h = new THREE.Mesh(this.geo.head, moving ? this.mat.light : this.mat.amber); h.position.set(x, 0.85, total / 2 + 0.05); g.add(h); }
+    g.userData.len = total;
+    return g;
   }
 
   private buildPlayer() {
@@ -521,88 +747,53 @@ export class Runner3D {
   /* ----- spawning ----- */
   private spawnRow() {
     const hard = Math.min(1, this.t / 70);
-    const row: (Kind | null)[] = [0, 1, 2].map(() => {
+    const free = [0, 1, 2].map((l) => this.busy[l] <= this.dist);
+    const row: (Kind | "busy" | null)[] = [0, 1, 2].map((l) => {
+      if (!free[l]) return "busy";
       const r = Math.random();
-      return r < 0.3 - hard * 0.12 ? null : r < 0.55 ? "low" : r < 0.75 ? "high" : "pod";
+      return r < 0.32 - hard * 0.12 ? null : r < 0.52 ? "low" : r < 0.7 ? "high" : "pod";
     });
-    if (row.every((k) => k === "pod")) (row as (Kind | null)[])[Math.floor(Math.random() * 3)] = "low";
-    row.forEach((k, l) => { if (k) this.add(k, l, SPAWN_Z); });
-    const open = [0, 1, 2].filter((l) => row[l] !== "pod");
+    // never block all three lanes: trains + busy lanes must leave one passable lane
+    const blocked = () => row.filter((k) => k === "pod" || k === "busy").length;
+    for (let l = 0; l < 3 && blocked() > 2; l++) if (row[l] === "pod") row[l] = "low";
+    if (blocked() === 3) return;
+    row.forEach((k, l) => {
+      if (k === "pod") {
+        const n = 1 + (Math.random() < 0.35 + hard * 0.3 ? 1 : 0) + (Math.random() < hard * 0.4 ? 1 : 0);
+        const moving = Math.random() < 0.12 + hard * 0.25;
+        const len = n * CAR + (n - 1) * CAR_GAP;
+        this.busy[l] = this.dist + len + (moving ? 70 : 6);
+        this.add("pod", l, SPAWN_Z, 0, { n, moving });
+      } else if (k === "low" || k === "high") this.add(k, l, SPAWN_Z);
+    });
+    const open = [0, 1, 2].filter((l) => row[l] === null || row[l] === "low" || row[l] === "high");
     const cl = open[Math.floor(Math.random() * open.length)];
     const arc = row[cl] === "low";
     for (let i = 0; i < 5; i++) this.add("c", cl, SPAWN_Z + (i - 2) * 2.4, arc ? [0.9, 1.9, 2.5, 1.9, 0.9][i] : 0.9);
   }
 
-  private add(k: Kind, l: number, z: number, y = 0) {
-    let m: THREE.Object3D, len = 0;
+  private add(k: Kind, l: number, z: number, y = 0, train?: { n: number; moving: boolean }) {
+    let m: THREE.Object3D, len = 0, vz = 0;
     if (k === "c" && this.props.cheese) {
       m = this.props.cheese.clone();
       m.position.y = y;
-    } else if (k === "low" && this.props.barrier) {
-      m = this.props.barrier.clone();
-    } else if (k === "pod" && this.props.pod) {
-      m = this.props.pod.clone();
-      len = m.userData.len as number;
-      z -= len / 2;
     } else if (k === "c") {
       m = new THREE.Mesh(this.geo.cheese, this.mat.cheese);
       m.position.y = y;
     } else if (k === "low") {
-      const g = new THREE.Group();
-      const bar = new THREE.Mesh(this.geo.box, this.mat.stripe);
-      bar.scale.set(1.9, 0.42, 0.14); bar.position.y = 0.7;
-      g.add(bar);
-      for (const x of [-0.8, 0.8]) {
-        const leg = new THREE.Mesh(this.geo.box, this.mat.post);
-        leg.scale.set(0.12, 0.92, 0.12); leg.position.set(x, 0.46, 0);
-        g.add(leg);
-      }
-      m = g;
+      m = this.buildJump();
     } else if (k === "high") {
-      const g = new THREE.Group();
-      for (const x of [-1, 1]) {
-        const p = new THREE.Mesh(this.geo.box, this.mat.post);
-        p.scale.set(0.16, 2.9, 0.16); p.position.set(x, 1.45, 0);
-        g.add(p);
-      }
-      for (const yy of [1.35, 1.75, 2.15]) {
-        const b = new THREE.Mesh(this.geo.box, this.mat.laser);
-        b.scale.set(2, 0.06, 0.06); b.position.y = yy;
-        g.add(b);
-      }
-      m = g;
+      m = this.buildDuck();
     } else {
-      len = rnd(8, 14);
-      const hue = [0.52, 0.8, 0.6][l];
-      const g = new THREE.Group();
-      const body = new THREE.Mesh(this.geo.box, new THREE.MeshStandardMaterial({ color: new THREE.Color().setHSL(hue, 0.55, 0.32), roughness: 0.35, metalness: 0.35 }));
-      body.scale.set(1.95, 2.3, len); body.position.y = 1.3;
-      g.add(body);
-      const band = new THREE.MeshBasicMaterial({ color: new THREE.Color().setHSL(hue, 1, 0.6).multiplyScalar(2), toneMapped: false });
-      for (const x of [-0.99, 0.99]) {
-        const s = new THREE.Mesh(this.geo.box, band);
-        s.scale.set(0.03, 0.1, len - 0.4); s.position.set(x, 1.7, 0);
-        g.add(s);
-      }
-      const roof = new THREE.Mesh(this.geo.box, band);
-      roof.scale.set(1.6, 0.05, len - 0.6); roof.position.y = 2.47;
-      const glass = new THREE.Mesh(this.geo.box, this.mat.glass);
-      glass.scale.set(1.6, 0.8, 0.04); glass.position.set(0, 1.85, len / 2 + 0.01);
-      g.add(roof, glass);
-      for (const x of [-0.65, 0.65]) {
-        const hl = new THREE.Mesh(this.geo.box, this.mat.light);
-        hl.scale.set(0.34, 0.16, 0.04); hl.position.set(x, 0.7, len / 2 + 0.02);
-        g.add(hl);
-      }
-      const wheel = new THREE.Mesh(this.geo.box, this.mat.post);
-      wheel.scale.set(1.7, 0.3, len - 1); wheel.position.y = 0.15;
-      g.add(wheel);
-      m = g;
+      const tr = train ?? { n: 1, moving: false };
+      m = this.buildTrain(tr.n, tr.moving);
+      len = m.userData.len as number;
+      vz = tr.moving ? 9 : 0;
       z -= len / 2;
     }
     m.position.x = lx(l); m.position.z = z;
     this.scene.add(m);
-    this.objs.push({ k, l, m, len, y });
+    this.objs.push({ k, l, m, len, y, vz });
   }
 
   private playAnim(name: "run" | "jump" | "slide" | "die" | "idle") {
@@ -635,7 +826,11 @@ export class Runner3D {
     const dz = this.mode === "dying" || this.mode === "over" ? 0 : this.speed * dt;
 
     // scroll the world toward the camera
-    this.trackTex.offset.y += dz / 1.5;
+    this.dist += dz;
+    this.trackTex.offset.y += dz / 4;
+    this.sleepers.position.z = this.dist % 1.2;
+    for (const w of this.walls) { w.position.z += dz; if (w.position.z - WALL / 2 > 20) w.position.z -= this.walls.length / 2 * WALL; }
+    for (const b of this.bridges) { b.position.z += dz; if (b.position.z > 24) b.position.z -= 220; }
     for (const side of [-1, 1]) this.farZ[side] += dz;
     for (const b of this.buildings) {
       b.g.position.z += dz;
@@ -646,6 +841,7 @@ export class Runner3D {
       }
     }
     for (const l of this.lamps) { l.position.z += dz; if (l.position.z > 16) l.position.z -= 14 * 12; }
+    for (const o of this.street) { o.position.z += dz; if (o.position.z > 18) o.position.z -= 16 * 15; }
 
     // player physics
     const tx = lx(this.lane);
@@ -667,25 +863,37 @@ export class Runner3D {
       }
       const bodyLo = this.py + 0.3, bodyHi = this.py + (sliding ? 1.1 : 2.0);
       for (const o of this.objs) {
-        o.m.position.z += dz;
+        o.m.position.z += dz + (running ? (o.vz ?? 0) * dt : 0);
+        if (o.k === "c" && o.hit) {
+          // squash-and-pop on pickup
+          o.ht = (o.ht ?? 0) + dt;
+          const k = Math.min(1, o.ht / 0.18);
+          o.m.scale.set(1 + 0.8 * k, Math.max(0.05, 1 - 0.85 * k), 1 + 0.8 * k);
+          o.m.position.y += dt * 3;
+          continue;
+        }
         if (o.k === "c") { o.m.rotation.y += dt * 3; o.m.position.y = o.y + Math.sin(this.t * 4 + o.m.position.z) * 0.08; }
         if (o.hit || !running) continue;
         const z = o.m.position.z;
         const inLane = Math.abs(lx(o.l) - this.px) < 1.0;
         if (o.k === "c") {
           if (Math.abs(z) < 0.9 && (this.opts.magnet || (inLane && o.y > bodyLo - 0.5 && o.y < bodyHi + 0.4))) {
-            o.hit = true; this.cheese += this.opts.double ? 2 : 1;
+            o.hit = true; o.ht = 0; this.cheese += this.opts.double ? 2 : 1;
+            if (this.onPickup) {
+              const v = o.m.getWorldPosition(new THREE.Vector3()).project(this.camera);
+              this.onPickup((v.x + 1) / 2 * this.el.clientWidth, (1 - v.y) / 2 * this.el.clientHeight);
+            }
           }
         } else if (inLane) {
           const near = o.k === "pod" ? z + o.len / 2 : z + 0.15, far = o.k === "pod" ? z - o.len / 2 : z - 0.15;
           if (near > -0.45 && far < 0.45) {
-            if (o.k === "pod" || (o.k === "low" && this.py < 0.95) || (o.k === "high" && !sliding)) { this.mode = "dying"; this.dieT = 0; }
+            if (o.k === "pod" || (o.k === "low" && this.py < 1.0) || (o.k === "high" && !sliding)) { this.mode = "dying"; this.dieT = 0; }
           }
         }
       }
       for (let i = this.objs.length - 1; i >= 0; i--) {
         const o = this.objs[i];
-        if ((o.hit && o.k === "c") || o.m.position.z - o.len / 2 > 14) { this.scene.remove(o.m); this.objs.splice(i, 1); }
+        if ((o.hit && o.k === "c" && (o.ht ?? 0) > 0.18) || o.m.position.z - o.len / 2 > 14) { this.scene.remove(o.m); this.objs.splice(i, 1); }
       }
       if (running) this.onHud(Math.floor(this.score), this.cheese);
     }
