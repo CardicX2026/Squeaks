@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { setRef, TESTING, useGame, useToast } from "@/lib/store";
 import { CARDICX, DOCS, SOCIALS } from "@/lib/content";
+import { FlakeField, SnowCap } from "@/components/winter";
 
 export const fmt = (n: number) => Math.floor(n).toLocaleString("en-US");
 export { CARDICX, SOCIALS };
@@ -132,6 +133,7 @@ export function Shell({ children, theme = "site" }: { children: ReactNode; theme
   return (
     <div className={theme}>
       <Snow />
+      {theme === "game" && <FlakeField className="game-flakes" n={8} seed={2} />}
       <nav className="nav" aria-label="Main">
         <div className="wrap nav-in">
           <Link href="/" className="logo" aria-label="Squeaks home">
@@ -145,6 +147,7 @@ export function Shell({ children, theme = "site" }: { children: ReactNode; theme
           </Link>
           <Link href="/play" className="btn btn-play btn-sm hide-m">Play now</Link>
         </div>
+        <SnowCap />
       </nav>
       <main>{children}</main>
       <footer className="navy">

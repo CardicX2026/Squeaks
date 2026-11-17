@@ -1,15 +1,23 @@
 "use client";
 /* eslint-disable @next/next/no-img-element */
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Cheese, fmt, GameNav, PageHead, Shell } from "@/components/ui";
 import { GAMES } from "@/lib/content";
+import { SnowCap } from "@/components/winter";
 import { useGame } from "@/lib/store";
 
 /** Game artwork: tries public/games/<slot>, then a fallback, then a styled placeholder. */
 function Art({ img, fallback, name }: { img: string; fallback: string; name: string }) {
   const [src, setSrc] = useState(img);
   const [failed, setFailed] = useState(false);
+  const ref = useRef<HTMLImageElement>(null);
+  const onFail = () => (fallback && src !== fallback ? setSrc(fallback) : setFailed(true));
+  // the image can fail before React attaches onError (server-rendered), so check once mounted
+  useEffect(() => {
+    const el = ref.current;
+    if (el && el.complete && el.naturalWidth === 0) onFail();
+  });
   if (failed) {
     return (
       <div className="ph-art">
@@ -18,7 +26,7 @@ function Art({ img, fallback, name }: { img: string; fallback: string; name: str
       </div>
     );
   }
-  return <img src={src} alt={name} onError={() => (fallback && src !== fallback ? setSrc(fallback) : setFailed(true))} />;
+  return <img ref={ref} src={src} alt={name} onError={onFail} />;
 }
 
 export default function Arcade() {
@@ -39,6 +47,7 @@ export default function Arcade() {
           {GAMES.map((x, i) => {
             const inner = (
               <>
+                <SnowCap seed={i} />
                 <div className="art">
                   <span className={`pill badge ${x.live ? "green" : "gray"}`}>{x.live ? <><span className="dot" /> Live</> : "Soon"}</span>
                   <Art img={x.img} fallback={x.fallback} name={x.name} />
@@ -52,8 +61,8 @@ export default function Arcade() {
               </>
             );
             return x.live
-              ? <Link key={x.id} href={x.href} className="gcardx live" data-r style={{ ["--d" as string]: i }}>{inner}</Link>
-              : <div key={x.id} className="gcardx" data-r style={{ ["--d" as string]: i }} aria-disabled>{inner}</div>;
+              ? <Link key={x.id} href={x.href} className="gcardx live capped" data-r style={{ ["--d" as string]: i }}>{inner}</Link>
+              : <div key={x.id} className="gcardx capped" data-r style={{ ["--d" as string]: i }} aria-disabled>{inner}</div>;
           })}
         </div>
       </section>

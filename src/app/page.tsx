@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { CountUp, Icon, Shell } from "@/components/ui";
 import { Allocation } from "@/components/alloc";
+import { FlakeField, SnowCap } from "@/components/winter";
 import { CARDICX, DOCS, NFTS, SOCIALS, TOKEN } from "@/lib/content";
 
 const PILLARS = [
@@ -21,6 +22,7 @@ export default function Home() {
     <Shell>
       {/* HERO — winter */}
       <section className="hero winter">
+        <FlakeField n={6} />
         <div className="wrap hero-grid">
           <div>
             <span className="pill" data-r><span className="dot" /> {TOKEN.ticker} · the official token of CardicX</span>
@@ -109,8 +111,9 @@ export default function Home() {
       </section>
 
       {/* TOKENOMICS + LAUNCH — navy */}
-      <section className="sec navy">
-        <div className="wrap">
+      <section className="sec navy" style={{ overflow: "hidden" }}>
+        <FlakeField n={5} seed={3} />
+        <div className="wrap" style={{ position: "relative" }}>
           <div className="split" style={{ alignItems: "start" }}>
             <div>
               <span className="eyebrow" data-r>Squeakonomics</span>
@@ -178,7 +181,7 @@ export default function Home() {
           <div className="phone" data-r><img src="/mice/chase.webp" alt="Cheese Chase gameplay preview" loading="lazy" /></div>
         </div>
         <div className="wrap" style={{ marginTop: "clamp(64px, 9vw, 112px)" }}>
-          <div className="cx" data-r>
+          <div className="cx capped" data-r><SnowCap seed={1} />
             <div className="pic"><img src="/mice/cardicx.webp" alt="" loading="lazy" /></div>
             <div>
               <h3 style={{ fontSize: "clamp(20px, 2.4vw, 26px)" }}>The official token of CardicX</h3>

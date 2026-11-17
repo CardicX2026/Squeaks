@@ -522,3 +522,58 @@ footer .copy-row { display: flex; justify-content: space-between; gap: 16px; fle
 .game main > section:last-of-type { padding-bottom: clamp(56px, 8vw, 96px); }
 .bg-art > .art { opacity: 0.07; left: 45%; background-size: contain; background-repeat: no-repeat; background-position: right center; filter: grayscale(0.2); mask-image: linear-gradient(90deg, transparent, #000 40%); -webkit-mask-image: linear-gradient(90deg, transparent, #000 40%); }
 @media (max-width: 900px) { .bg-art > .art { left: 20%; opacity: 0.05; } }
+
+/* ---------- winter decorations ---------- */
+.flake { color: #fff; filter: drop-shadow(3px 4px 0 rgba(30, 70, 140, 0.18)); }
+@keyframes turn { to { rotate: 360deg; } }
+.flakes-bg { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 0; }
+.flakes-bg .flake { position: absolute; translate: -50% -50%; opacity: 0.55; animation: turn 60s linear infinite; }
+.game .flakes-bg .flake, .navy .flakes-bg .flake { opacity: 0.07; filter: none; }
+.game-flakes { position: fixed; inset: 0; z-index: 0; }
+.game main, .game footer { position: relative; z-index: 1; }
+.snowcap { position: absolute; left: -6px; right: -6px; width: calc(100% + 12px); height: 26px; pointer-events: none; z-index: 3; filter: drop-shadow(0 2px 1px rgba(40, 80, 140, 0.18)); }
+.capped { position: relative; }
+.capped > .snowcap { top: -15px; }
+.nav { position: sticky; }
+.nav > .snowcap { top: auto; bottom: -18px; left: 0; right: 0; width: 100%; height: 24px; }
+.site .nav > .snowcap { filter: drop-shadow(0 2px 2px rgba(60, 110, 170, 0.25)); }
+@media (max-width: 600px) { .snowcap { height: 18px; } .capped > .snowcap { top: -11px; } .nav > .snowcap { bottom: -13px; height: 17px; } }
+.winter .flakes-bg .flake { opacity: 0.8; }
+.gcardx.capped, .mine.capped { overflow: visible; }
+.gcardx .art { border-radius: 26px 26px 0 0; }
+
+/* ---------- Mine v2 ---------- */
+.steps3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: clamp(20px, 3vw, 28px); }
+.steps3 div { display: flex; gap: 10px; align-items: center; padding: 12px 14px; border-radius: 16px; background: var(--night2); color: var(--text3); font-weight: 700; font-size: 14px; transition: background 0.3s, color 0.3s; }
+.steps3 i { flex: none; width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-style: normal; font-family: var(--font-head); background: rgba(255, 255, 255, 0.07); }
+.steps3 .on { background: rgba(242, 140, 63, 0.16); color: #fff; }
+.steps3 .on i { background: var(--fur); color: var(--ink); animation: pop 0.4s var(--bounce); }
+.steps3 .done i { background: var(--mint); color: var(--ink); }
+@media (max-width: 520px) { .steps3 div { flex-direction: column; text-align: center; gap: 6px; padding: 10px 6px; font-size: 12px; } }
+.mine { border-radius: 28px; background: radial-gradient(120% 80% at 50% 0%, #4a2c12, #1d1109 70%); text-align: center; }
+.mine h2 { font-size: clamp(26px, 4vw, 34px); margin-top: 6px; }
+.mine .say { color: #e8d6c4; max-width: 340px; margin: 8px auto 0; font-size: 15px; }
+.mine .chips { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+.mine .chips span { padding: 7px 12px; border-radius: 999px; background: rgba(0, 0, 0, 0.28); font-size: 13px; font-weight: 700; }
+.mine .chips b { color: var(--cheese); }
+.ring .pile { font-size: 40px; line-height: 1; margin-bottom: 4px; display: block; }
+.ring.going .pile { animation: bob 1.6s ease-in-out infinite; }
+.ring.ready { box-shadow: 0 0 0 6px rgba(255, 200, 61, 0.15), 0 0 60px rgba(255, 200, 61, 0.35); animation: pulse 1.8s infinite; }
+.crew { justify-content: center; }
+.crew div { max-width: 64px; position: relative; }
+.crew .locked::after { content: "🔒"; position: absolute; inset: 0; display: grid; place-items: center; font-size: 16px; }
+.how { display: grid; gap: 14px; margin-top: 8px; }
+
+.how b { display: block; }
+.how span.n { flex: none; width: 30px; height: 30px; border-radius: 10px; display: grid; place-items: center; font-family: var(--font-head); font-weight: 800; background: rgba(242, 140, 63, 0.15); color: var(--fur); }
+.lvl { display: flex; gap: 6px; margin: 14px 0; }
+.lvl i { flex: 1; height: 8px; border-radius: 999px; background: rgba(255, 255, 255, 0.08); }
+.lvl i.on { background: linear-gradient(90deg, var(--fur), var(--cheese)); }
+/* heavier snow caps */
+.snowcap { height: 44px; filter: drop-shadow(0 3px 2px rgba(40, 80, 140, 0.22)); }
+.capped > .snowcap { top: -26px; }
+.nav > .snowcap { bottom: -26px; height: 40px; }
+@media (max-width: 600px) { .snowcap { height: 32px; } .capped > .snowcap { top: -19px; } .nav > .snowcap { bottom: -19px; height: 30px; } }
+.how > div { display: flex; gap: 12px; align-items: flex-start; }
+.how > div > div { display: grid; gap: 2px; }
+.how div div { flex-direction: column; }

@@ -1,7 +1,8 @@
 "use client";
 /* eslint-disable @next/next/no-img-element */
 import { useEffect, useState } from "react";
-import { Cheese, fmt, PageHead, Price, Shell, GameNav } from "@/components/ui";
+import { Cheese, fmt, GameNav, PageHead, Price, Shell } from "@/components/ui";
+import { SnowCap } from "@/components/winter";
 import {
   MINE_HOURS, MINE_MAX_LEVEL, REF_BONUS, TESTING, mineCollect, mineProgress, mineRate, mineSkip, mineStart,
   mineUpgrade, mineUpgradeCost, mineYield, toast, useGame,
@@ -21,69 +22,98 @@ export default function Mine() {
   const lvl = g.mine.level;
   const cost = mineUpgradeCost(lvl);
   const link = typeof window === "undefined" || !g.handle ? "" : `${window.location.origin}/?ref=${g.handle}`;
+  const step = !p.active ? 1 : p.done ? 3 : 2;
+
+  const state = step === 1
+    ? { title: "Your crew is ready", say: `Start a ${MINE_HOURS}-hour shift. You can close the app; the mine keeps working.` }
+    : step === 2
+      ? { title: "Mining in progress", say: "Come back when the timer hits zero to collect your Cheese." }
+      : { title: "Cheese is ready!", say: "Collect it, then start the next shift right away." };
 
   return (
     <Shell theme="game">
-      <PageHead eyebrow="Mine" title={<>The Cheese <span className="yel">Mine</span></>} img="chef">
-        Send your crew down for {MINE_HOURS} hours. When the session ends, collect the Cheese and start the next one.
+      <PageHead eyebrow="Cheese Mine" title={<>Mine Cheese while <span className="yel">you sleep.</span></>} img="chef">
+        Start a shift, come back in {MINE_HOURS} hours, collect, repeat. Upgrade your crew to dig more each time.
       </PageHead>
       <section className="wrap" style={{ paddingBottom: 0 }}><GameNav /></section>
-      <section className="wrap two">
-        <div className="mine">
-          <div className="row">
-            <span className="pill">Level {lvl}</span>
-            <span className="muted" style={{ fontWeight: 800 }}>{mineRate(lvl)} <Cheese /> / hour · {fmt(mineYield(lvl))} per session</span>
-          </div>
-          <div className="ring" style={{ ["--p" as string]: p.pct * 100 }}>
-            <div>
-              {p.active ? (
-                <>
-                  <div className="t">{p.done ? "Ready" : clock(p.left)}</div>
-                  <div className="yel" style={{ fontWeight: 800 }}><Cheese /> {fmt(p.mined)} mined</div>
-                </>
-              ) : (
-                <><div className="t">Idle</div><div className="muted" style={{ fontWeight: 800 }}>Crew is waiting</div></>
-              )}
-            </div>
-          </div>
-          <div className="crew">
-            {CREW.map((w, i) => <div key={w} className={i >= lvl ? "locked" : ""}><img src={`/mice/${w}.webp`} alt="" /></div>)}
-          </div>
-          <div style={{ marginTop: 20, display: "grid", gap: 10 }}>
-            {!p.active && <button className="btn btn-play btn-big btn-block" onClick={() => { mineStart(); toast("Mining started. Back in 24 hours."); }}>Start mining</button>}
-            {p.active && <button className="btn btn-play btn-big btn-block" disabled={!p.done} onClick={() => { const n = mineCollect(); if (n) toast(`Collected ${fmt(n)} Cheese`); }}>{p.done ? `Collect ${fmt(mineYield(lvl))} Cheese` : "Mining…"}</button>}
-            {TESTING && p.active && !p.done && <button className="btn btn-ghost btn-sm" onClick={mineSkip}>Testing only: finish session now</button>}
-          </div>
+
+      <section className="wrap">
+        <div className="steps3" aria-label="How it works">
+          {["Start a shift", `Wait ${MINE_HOURS}h`, "Collect"].map((t, i) => (
+            <div key={t} className={step === i + 1 ? "on" : step > i + 1 ? "done" : ""}><i>{step > i + 1 ? "✓" : i + 1}</i>{t}</div>
+          ))}
         </div>
 
-        <div style={{ display: "grid", gap: 18 }}>
-          <div className="card">
-            <div className="row"><span className="eyebrow">Upgrade crew</span><span className="pill gray">{lvl} / {MINE_MAX_LEVEL}</span></div>
-            <p className="muted" style={{ margin: "12px 0 16px" }}>Each level adds a worker and {fmt(mineYield(1))} Cheese per session. Upgrades apply between sessions.</p>
-            <div className="row">
-              {lvl < MINE_MAX_LEVEL ? <Price price={100 * lvl * lvl} /> : <span className="muted">Max level</span>}
-              <button className="btn btn-play btn-sm" disabled={lvl >= MINE_MAX_LEVEL || p.active || g.cheese < cost} onClick={() => mineUpgrade() && toast(`Mine upgraded to level ${lvl + 1}`)}>
-                {p.active ? "Wait for session" : "Upgrade"}
-              </button>
+        <div className="two">
+          <div className="mine card capped" style={{ border: 0 }}>
+            <SnowCap />
+            <span className="pill">Level {lvl} crew</span>
+            <h2>{state.title}</h2>
+            <p className="say">{state.say}</p>
+
+            <div className={`ring${step === 2 ? " going" : ""}${step === 3 ? " ready" : ""}`} style={{ ["--p" as string]: p.pct * 100 }}>
+              <div>
+                <span className="pile">{step === 3 ? "🧀" : step === 2 ? "⛏️" : "😴"}</span>
+                <div className="t">{step === 2 ? clock(p.left) : step === 3 ? fmt(mineYield(lvl)) : `${MINE_HOURS}:00:00`}</div>
+                <div className="muted small" style={{ fontWeight: 700 }}>
+                  {step === 2 ? <><Cheese s={13} /> {fmt(p.mined)} mined so far</> : step === 3 ? "Cheese waiting" : "per shift"}
+                </div>
+              </div>
+            </div>
+
+            <div className="crew">
+              {CREW.map((w, i) => <div key={w} className={i >= lvl ? "locked" : ""} title={i < lvl ? "Worker" : `Unlocks at level ${i + 1}`}><img src={`/mice/${w}.webp`} alt="" /></div>)}
+            </div>
+
+            <div style={{ marginTop: 22, display: "grid", gap: 10 }}>
+              {step === 1 && <button className="btn btn-play btn-big btn-block" onClick={() => { mineStart(); toast(`Shift started. Back in ${MINE_HOURS} hours!`); }}>⛏️ Start mining</button>}
+              {step === 2 && <button className="btn btn-ghost btn-big btn-block" disabled>Mining… {clock(p.left)}</button>}
+              {step === 3 && <button className="btn btn-play btn-big btn-block" onClick={() => { const n = mineCollect(); if (n) toast(`+${fmt(n)} Cheese collected`); }}>🧀 Collect {fmt(mineYield(lvl))} Cheese</button>}
+              {TESTING && step === 2 && <button className="btn btn-ghost btn-sm" onClick={mineSkip}>Testing only: finish the shift now</button>}
+            </div>
+
+            <div className="chips">
+              <span><b>{mineRate(lvl)}</b> Cheese / hour</span>
+              <span><b>{fmt(mineYield(lvl))}</b> per shift</span>
+              <span><b>{fmt(g.mine.total)}</b> mined all-time</span>
             </div>
           </div>
-          <div className="card">
-            <span className="eyebrow">Invite a friend</span>
-            <p className="muted" style={{ margin: "12px 0 0" }}>
-              You and your friend each get a one-time {REF_BONUS} Cheese when they finish their first run. One level only, and no bonus for how many people they invite.
-            </p>
-            {link ? (
-              <div className="copy">
-                <input readOnly value={link} onFocus={(e) => e.target.select()} />
-                <button className="btn btn-play btn-sm" onClick={() => navigator.clipboard?.writeText(link).then(() => toast("Invite link copied"))}>Copy</button>
+
+          <div style={{ display: "grid", gap: 18 }}>
+            <div className="card">
+              <div className="row"><h3 style={{ fontSize: 22 }}>Upgrade your crew</h3><span className="pill gray">Level {lvl} / {MINE_MAX_LEVEL}</span></div>
+              <div className="lvl" aria-hidden>{Array.from({ length: MINE_MAX_LEVEL }, (_, i) => <i key={i} className={i < lvl ? "on" : ""} />)}</div>
+              <p className="muted">Each level adds a worker and <b style={{ color: "var(--text)" }}>+{fmt(mineYield(1))} Cheese</b> per shift. Upgrade between shifts.</p>
+              <div className="row" style={{ marginTop: 16 }}>
+                {lvl < MINE_MAX_LEVEL ? <Price price={100 * lvl * lvl} /> : <span className="muted">Max level reached</span>}
+                <button className="btn btn-play btn-sm" disabled={lvl >= MINE_MAX_LEVEL || p.active || g.cheese < cost} onClick={() => mineUpgrade() && toast(`Crew upgraded to level ${lvl + 1}!`)}>
+                  {p.active ? "Finish the shift first" : "Upgrade"}
+                </button>
               </div>
-            ) : <a href="/profile" className="btn btn-ghost btn-sm" style={{ marginTop: 14 }}>Set a handle to get your link</a>}
-            {g.ref && <p className="small" style={{ marginTop: 12, fontWeight: 800 }}>Invited by <span className="yel">@{g.ref}</span></p>}
-            <p className="muted small" style={{ marginTop: 10 }}>Bonuses are credited once accounts go live. Guest test data stays on this device.</p>
-          </div>
-          <div className="card">
-            <span className="eyebrow">Lifetime</span>
-            <div className="kv" style={{ marginTop: 14 }}><span>Total mined</span><span className="yel"><Cheese /> {fmt(g.mine.total)}</span><span>Sessions collected today</span><span>{g.day.mined}</span></div>
+            </div>
+
+            <div className="card">
+              <h3 style={{ fontSize: 22 }}>Invite a friend</h3>
+              <p className="muted" style={{ marginTop: 8 }}>
+                You both get <b style={{ color: "var(--text)" }}>{REF_BONUS} Cheese</b> once when they finish their first run. One level only, no pyramid.
+              </p>
+              {link ? (
+                <div className="copy">
+                  <input readOnly value={link} onFocus={(e) => e.target.select()} aria-label="Your invite link" />
+                  <button className="btn btn-play btn-sm" onClick={() => navigator.clipboard?.writeText(link).then(() => toast("Invite link copied"))}>Copy</button>
+                </div>
+              ) : <a href="/profile" className="btn btn-ghost btn-sm" style={{ marginTop: 14 }}>Set a handle to get your link</a>}
+              {g.ref && <p className="small" style={{ marginTop: 12, fontWeight: 700 }}>Invited by <span className="yel">@{g.ref}</span></p>}
+            </div>
+
+            <div className="card">
+              <h3 style={{ fontSize: 22, marginBottom: 14 }}>How the mine works</h3>
+              <div className="how">
+                <div><span className="n">1</span><div><b>One shift at a time</b><span className="muted small">A shift lasts {MINE_HOURS} hours and fills up while you are away.</span></div></div>
+                <div><span className="n">2</span><div><b>It waits for you</b><span className="muted small">When a shift ends, your Cheese stays safe until you collect it.</span></div></div>
+                <div><span className="n">3</span><div><b>Cheese, not crypto</b><span className="muted small">Cheese is an in-game currency for the shop. It has no cash value.</span></div></div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
