@@ -32,6 +32,11 @@ export default function CheeseChase() {
   const [ready, setReady] = useState(false);
   const [pick, setPick] = useState<string[]>([]);
   const [active, setActive] = useState<string[]>([]);
+  type Fly = { id: number; x: number; y: number; tx: number; ty: number };
+  const [flyers, setFlyers] = useState<Fly[]>([]);
+  const flyId = useRef(0);
+  const pillRef = useRef<HTMLSpanElement>(null);
+  const bump = () => { const el = pillRef.current; if (!el) return; el.classList.remove("bump"); void el.offsetWidth; el.classList.add("bump"); };
 
   // full-screen page: lock page scroll
   useEffect(() => { document.body.style.overflow = "hidden"; return () => { document.body.style.overflow = ""; }; }, []);
@@ -48,6 +53,12 @@ export default function CheeseChase() {
           if (cheeseEl.current) cheeseEl.current.textContent = String(c);
         },
         onEnd: (s, c) => { setRes({ score: s, ...finishRun(s, c) }); setPhase("over"); },
+        // a collected wedge flies from where it was picked up into the HUD counter
+        onPickup: (x, y) => {
+          const st = stage.current?.getBoundingClientRect(), pr = pillRef.current?.getBoundingClientRect();
+          const tx = st && pr ? pr.left - st.left + 22 - x : 0, ty = st && pr ? pr.top - st.top + pr.height / 2 - y : -300;
+          setFlyers((f) => [...f.slice(-10), { id: ++flyId.current, x, y, tx, ty }]);
+        },
       });
       eng.current = e;
       // equipped shop skin, if it has a 3D model; otherwise the default mouse
@@ -75,6 +86,7 @@ export default function CheeseChase() {
   });
 
   const start = () => {
+    setFlyers([]);
     const st = getGame();
     const used = spendBoosts(pick);
     setActive(pick.filter((id) => (st.boosts[id] ?? 0) > 0));
@@ -168,11 +180,15 @@ export default function CheeseChase() {
             <span className="hud-pill"><span ref={scoreEl}>0</span></span>
             <div className="gm-hud-r">
               {active.map((id) => <span key={id} className="hud-boost">{BOOSTS.find((b) => b.id === id)?.e}</span>)}
-              <span className="hud-pill"><Cheese s={18} /> <span ref={cheeseEl}>0</span></span>
+              <span className="hud-pill" ref={pillRef}><Cheese s={18} /> <span ref={cheeseEl}>0</span></span>
               <button className="gm-round" onPointerDown={(e) => e.stopPropagation()} onClick={pause} aria-label="Pause">❚❚</button>
             </div>
           </div>
         )}
+        {flyers.map((f) => (
+          <span key={f.id} className="flyer" style={{ left: f.x, top: f.y, ["--tx" as string]: `${f.tx}px`, ["--ty" as string]: `${f.ty}px` }}
+            onAnimationEnd={() => { setFlyers((fs) => fs.filter((x) => x.id !== f.id)); bump(); }}><Cheese s={24} /></span>
+        ))}
         {phase === "run" && <div className="hint">Swipe ← → · ↑ jump · ↓ slide</div>}
 
         {phase === "paused" && (
