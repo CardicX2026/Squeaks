@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { setRef, TESTING, useGame, useToast } from "@/lib/store";
+import { setRef, TESTING, useAccountState, useGame, useToast } from "@/lib/store";
+import { useAccount } from "@/components/auth";
 import { CARDICX, DOCS, SOCIALS } from "@/lib/content";
 import { FlakeField, SnowCap } from "@/components/winter";
 
@@ -116,6 +117,9 @@ export function GameNav() {
 export function Shell({ children, theme = "site" }: { children: ReactNode; theme?: "site" | "game" }) {
   const path = usePathname();
   const g = useGame();
+  const acct = useAccount();
+  const saved = useAccountState();
+  const bal = saved ? { cheese: saved.cheese, points: saved.points } : { cheese: g.cheese, points: g.points };
   const t = useToast();
   useEffect(() => {
     const r = new URLSearchParams(window.location.search).get("ref");
@@ -143,8 +147,11 @@ export function Shell({ children, theme = "site" }: { children: ReactNode; theme
             {NAV.map((l) => <Link key={l.h} href={l.h} className={on(l.h) ? "on" : ""}>{l.n}</Link>)}
           </div>
           <Link href="/profile" className="wallet" title="Your profile">
-            <Cheese /> <b>{fmt(g.cheese)}</b><span className="sep" /><span className="pts">{fmt(g.points)} pts</span>
+            <Cheese /> <b>{fmt(bal.cheese)}</b><span className="sep" /><span className="pts">{fmt(bal.points)} pts</span>
           </Link>
+          {acct.enabled && (acct.authed
+            ? <button className="btn btn-ghost btn-sm hide-m" onClick={acct.logout} title="Log out">{acct.label}</button>
+            : <button className="btn btn-ghost btn-sm" onClick={acct.login}>Log in</button>)}
           <Link href="/play" className="btn btn-play btn-sm hide-m">Play now</Link>
         </div>
         <SnowCap />

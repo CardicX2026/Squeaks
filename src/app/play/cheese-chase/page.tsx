@@ -8,6 +8,10 @@ import {
   spendBoosts, toast, useGame, useToast,
 } from "@/lib/store";
 import type { Action, Runner3D } from "@/game/runner3d";
+import { audio } from "@/game/audio";
+import { useAccount } from "@/components/auth";
+import { runFinish, runStart } from "@/lib/sync";
+import { setAccount, useAccountState } from "@/lib/store";
 
 type Res = { score: number; cheese: number; points: number; best: boolean };
 type Phase = "menu" | "run" | "paused" | "over";
@@ -21,6 +25,13 @@ const BOOSTS = [
 export default function CheeseChase() {
   const g = useGame();
   const t = useToast();
+  const acct = useAccount();
+  const saved = useAccountState();
+  const runId = useRef<string | null>(null);
+  const acctRef = useRef(acct);
+  acctRef.current = acct;
+  const savedRef = useRef(saved);
+  savedRef.current = saved;
   const stage = useRef<HTMLDivElement>(null);
   const eng = useRef<Runner3D | null>(null);
   const scoreEl = useRef<HTMLSpanElement>(null);
@@ -52,9 +63,24 @@ export default function CheeseChase() {
           if (scoreEl.current) scoreEl.current.textContent = s.toLocaleString("en-US");
           if (cheeseEl.current) cheeseEl.current.textContent = String(c);
         },
-        onEnd: (s, c) => { setRes({ score: s, ...finishRun(s, c) }); setPhase("over"); },
+        onEnd: (s, c) => {
+          const local = finishRun(s, c); // keeps missions and daily stats working
+          setRes({ score: s, ...local });
+          setPhase("over");
+          // signed in: the server checks the run and pays the real balances
+          const id = runId.current; runId.current = null;
+          if (id && acctRef.current.authed) {
+            acctRef.current.token().then((tk) => (tk ? runFinish(tk, id, s, c) : null)).then((r) => {
+              if (!r) return;
+              setRes({ score: s, cheese: r.cheese, points: r.points, best: r.best_score <= s });
+              setAccount({ handle: savedRef.current?.handle ?? null, cheese: r.balances.cheese, points: r.balances.points, best_score: r.best_score });
+            }).catch(() => toast("Run saved on this device only (server unavailable)"));
+          }
+        },
         // a collected wedge flies from where it was picked up into the HUD counter
+        onEvent: (ev) => audio().sfx(ev),
         onPickup: (x, y) => {
+          audio().sfx("pickup");
           const st = stage.current?.getBoundingClientRect(), pr = pillRef.current?.getBoundingClientRect();
           const tx = st && pr ? pr.left - st.left + 22 - x : 0, ty = st && pr ? pr.top - st.top + pr.height / 2 - y : -300;
           setFlyers((f) => [...f.slice(-10), { id: ++flyId.current, x, y, tx, ty }]);
@@ -86,7 +112,26 @@ export default function CheeseChase() {
     return () => window.removeEventListener("keydown", key);
   });
 
+  const [snd, setSnd] = useState({ music: true, sfx: true });
+  useEffect(() => { const a = audio(); setSnd({ music: a.musicOn, sfx: a.sfxOn }); }, []);
+  // browsers only allow audio after a tap: unlock and start the music on the first one
+  useEffect(() => {
+    const go = () => { const a = audio(); a.unlock(); a.startMusic(); };
+    window.addEventListener("pointerdown", go, { once: true });
+    window.addEventListener("keydown", go, { once: true });
+    return () => { window.removeEventListener("pointerdown", go); window.removeEventListener("keydown", go); audio().stopMusic(); };
+  }, []);
+  const toggle2 = (k: "music" | "sfx") => {
+    const a = audio(); a.unlock();
+    if (k === "music") a.setMusic(!a.musicOn); else a.setSfx(!a.sfxOn);
+    setSnd({ music: a.musicOn, sfx: a.sfxOn });
+    a.sfx("click");
+  };
+
   const start = () => {
+    audio().unlock();
+    runId.current = null;
+    if (acct.authed) acct.token().then((tk) => (tk ? runStart(tk) : null)).then((r) => { if (r) runId.current = r.run_id; }).catch(() => {});
     setFlyers([]);
     const st = getGame();
     const used = spendBoosts(pick);
@@ -130,9 +175,11 @@ export default function CheeseChase() {
         {phase === "menu" && ready && (
           <div className="gm">
             <div className="gm-top">
-              <Link href="/shop" className="gm-pill"><Cheese s={18} /><b>{fmt(g.cheese)}</b><span className="plus">+</span></Link>
-              <span className="gm-pill pts"><span className="star">★</span><b>{fmt(g.points)}</b></span>
-              <Link href="/play" className="gm-round" aria-label="Back to the arcade">✕</Link>
+              <Link href="/shop" className="gm-pill"><Cheese s={18} /><b>{fmt(saved?.cheese ?? g.cheese)}</b><span className="plus">+</span></Link>
+              <span className="gm-pill pts"><span className="star">★</span><b>{fmt(saved?.points ?? g.points)}</b></span>
+              <button className={`gm-round sm${snd.music ? "" : " off"}`} onClick={() => toggle2("music")} aria-label={snd.music ? "Music off" : "Music on"} aria-pressed={snd.music} title="Music">♫</button>
+              <button className={`gm-round sm${snd.sfx ? "" : " off"}`} onClick={() => toggle2("sfx")} aria-label={snd.sfx ? "Sound effects off" : "Sound effects on"} aria-pressed={snd.sfx} title="Sound effects">🔊</button>
+              <Link href="/play" className="gm-round sm" aria-label="Back to the arcade">✕</Link>
             </div>
 
             <div className="gm-cols">
@@ -146,7 +193,7 @@ export default function CheeseChase() {
                 </div>
               </div>
               <div className="gm-side right">
-                <button className={`gm-gift${gift ? " on" : ""}`} disabled={!gift} onClick={() => { const n = claimDaily(); if (n) toast(`Daily gift: +${n} Cheese`); }}>
+                <button className={`gm-gift${gift ? " on" : ""}`} disabled={!gift} onClick={() => { const n = claimDaily(); if (n) { audio().unlock(); audio().sfx("gift"); toast(`Daily gift: +${n} Cheese`); } }}>
                   <span className="gm-ic big">🎁</span>
                   <span><b>{gift ? "FREE" : "Claimed"}</b><small>{gift ? `${dailyReward(Math.min(7, g.daily.streak + 1))} Cheese` : "Back tomorrow"}</small></span>
                   {gift && <i className="gm-badge">1</i>}
@@ -169,6 +216,7 @@ export default function CheeseChase() {
             <div className="gm-bottom">
               <Link href="/shop" className="gm-skin">Skin: <b>{item(g.equip.Skins)?.name}</b> · change</Link>
               <button className="gm-play" onClick={start}>PLAY</button>
+              {acct.enabled && !acct.authed && <button className="gm-skin" onClick={acct.login}>Log in to save your progress and earn points →</button>}
               <p>Swipe ← → to switch lanes · ↑ jump · ↓ slide</p>
             </div>
           </div>

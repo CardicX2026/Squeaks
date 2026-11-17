@@ -652,3 +652,6 @@ footer .copy-row { display: flex; justify-content: space-between; gap: 16px; fle
 @keyframes flyhud { 0% { transform: translate(-50%, -50%) scale(1.5); } 20% { transform: translate(-50%, -70%) scale(1.25); } 100% { transform: translate(calc(-50% + var(--tx)), calc(-50% + var(--ty))) scale(0.55); opacity: 0.85; } }
 .hud-pill.bump { animation: hudbump 0.28s var(--bounce); }
 @keyframes hudbump { 50% { transform: scale(1.2); background: rgba(255, 200, 61, 0.35); } }
+.gm-top .gm-round.sm { margin-left: 0; width: 38px; height: 38px; font-size: 15px; }
+.gm-top .gm-round.sm:first-of-type { margin-left: auto; }
+.gm-round.off { opacity: 0.45; text-decoration: line-through; }

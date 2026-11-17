@@ -4,9 +4,11 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { CARDICX, Cheese, fmt, PageHead, Shell, GameNav } from "@/components/ui";
 import { item, ITEMS, resetAll, setHandle, toast, useGame } from "@/lib/store";
+import { useAccount } from "@/components/auth";
 
 export default function Profile() {
   const g = useGame();
+  const acct = useAccount();
   const [h, setH] = useState("");
   useEffect(() => setH(g.handle), [g.handle]);
   const owned = ITEMS.filter((i) => g.owned.includes(i.id));
@@ -40,7 +42,7 @@ export default function Profile() {
             <span className="eyebrow" style={{ color: "var(--cx)" }}>CardicX account</span>
             <p className="muted" style={{ margin: "12px 0 16px" }}>Connect to save progress across devices and redeem your Squeaks rewards in the CardicX Rewards Center.</p>
             <div className="row" style={{ justifyContent: "flex-start" }}>
-              <button className="btn btn-cx btn-sm" onClick={() => toast("Login is not switched on in this test build")}>Connect CardicX</button>
+              <button className="btn btn-cx btn-sm" onClick={() => (acct.enabled ? (acct.authed ? acct.logout() : acct.login()) : toast("Login switches on once the Privy app ID is added"))}>{acct.authed ? `Signed in as ${acct.label} · Log out` : "Log in with CardicX"}</button>
               <a className="cxl" href={CARDICX} target="_blank" rel="noreferrer">cardicx.com ↗</a>
             </div>
           </div>

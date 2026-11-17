@@ -16,6 +16,7 @@ import * as SkeletonUtils from "three/examples/jsm/utils/SkeletonUtils.js";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 
 export type Action = "l" | "r" | "j" | "s";
+export type GameEvent = "jump" | "slide" | "lane" | "crash" | "start" | "land";
 export type RunOpts = { trail: string; magnet: boolean; double: boolean; head: boolean };
 type Kind = "c" | "low" | "high" | "pod";
 type Obj = { k: Kind; l: number; m: THREE.Object3D; len: number; y: number; hit?: boolean; ht?: number; vz?: number };
@@ -236,6 +237,13 @@ export class Runner3D {
   private busy = [0, 0, 0];
   private trainMats: { side: THREE.Material; front: THREE.Material; body: THREE.Material }[] = [];
   private onPickup?: (x: number, y: number) => void;
+  private onEvent?: (e: GameEvent) => void;
+  private jumpBuf = 0;
+  private turn = Math.PI; // holder yaw: PI = facing the camera (menu), 0 = facing down the track
+  private baseFov = 62;
+  private snack = new THREE.Group();
+  private crumbs: { m: THREE.Mesh; v: THREE.Vector3; t: number }[] = [];
+  private biteT = 0;
   private street: THREE.Object3D[] = [];
   /** Place city props: water towers on some rooftops, shops and street furniture along both sidewalks. */
   setDecor(d: Decor) {
@@ -280,9 +288,9 @@ export class Runner3D {
   private speed = 8; private t = 0; private next = 0; private score = 0; private cheese = 0;
   private dieT = 0; private opts: RunOpts = { trail: "", magnet: false, double: false, head: false };
 
-  constructor(el: HTMLElement, cb: { onHud: (s: number, c: number) => void; onEnd: (s: number, c: number) => void; onPickup?: (x: number, y: number) => void }) {
+  constructor(el: HTMLElement, cb: { onHud: (s: number, c: number) => void; onEnd: (s: number, c: number) => void; onPickup?: (x: number, y: number) => void; onEvent?: (e: GameEvent) => void }) {
     this.el = el;
-    this.onHud = cb.onHud; this.onEnd = cb.onEnd; this.onPickup = cb.onPickup;
+    this.onHud = cb.onHud; this.onEnd = cb.onEnd; this.onPickup = cb.onPickup; this.onEvent = cb.onEvent;
     this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -359,6 +367,8 @@ export class Runner3D {
     this.speed = 22; this.t = 0; this.next = 30; this.cheese = 0; this.score = opts.head ? 500 : 0;
     this.setTrail(opts.trail);
     this.mode = "run";
+    this.jumpBuf = 0;
+    this.onEvent?.("start");
   }
 
   stop() {
@@ -366,14 +376,29 @@ export class Runner3D {
     this.objs = [];
     this.lane = 1; this.py = 0; this.vy = 0; this.slide = 0;
     this.mode = "idle";
+    this.speed = 0;
   }
 
   act(a: Action) {
     if (this.mode !== "run") return;
-    if (a === "l") this.lane = Math.max(0, this.lane - 1);
-    if (a === "r") this.lane = Math.min(2, this.lane + 1);
-    if (a === "j" && this.py < 0.05) { this.vy = 11.5; this.slide = 0; }
-    if (a === "s") { this.slide = 0.65; if (this.py > 0.05) this.vy = -20; }
+    if (a === "l" && this.lane > 0) { this.lane--; this.onEvent?.("lane"); }
+    if (a === "r" && this.lane < 2) { this.lane++; this.onEvent?.("lane"); }
+    if (a === "j") {
+      if (this.py < 0.05) this.doJump();
+      else this.jumpBuf = 0.18; // pressed a touch early: jump on landing
+    }
+    if (a === "s") { this.slide = 0.65; this.jumpBuf = 0; if (this.py > 0.05) this.vy = -20; this.onEvent?.("slide"); }
+  }
+  private doJump() { this.vy = 11.5; this.slide = 0; this.jumpBuf = 0; this.onEvent?.("jump"); }
+
+  /** The menu snack: a cheese wedge held at the mouth, nibbled with crumbs. */
+  private buildSnack() {
+    const w = new THREE.Mesh(this.geo.cheese, this.mat.cheese);
+    w.scale.setScalar(0.55);
+    w.rotation.set(0.3, 0.5, -0.2);
+    this.snack.add(w);
+    this.snack.position.set(0, 1.08, -0.42);
+    this.holder.add(this.snack);
   }
 
   dispose() {
@@ -396,7 +421,8 @@ export class Runner3D {
     this.renderer.setSize(w, h, false);
     this.composer.setSize(w, h);
     this.camera.aspect = w / h;
-    this.camera.fov = w / h < 0.75 ? 68 : 56;
+    this.baseFov = w / h < 0.75 ? 68 : 56;
+    this.camera.fov = this.baseFov;
     this.camera.updateProjectionMatrix();
   }
 
@@ -689,6 +715,7 @@ export class Runner3D {
       this.board.add(w);
     }
     this.rig.add(this.holder);
+    this.buildSnack();
     this.scene.add(this.rig);
 
     this.shadow = new THREE.Mesh(
@@ -796,6 +823,41 @@ export class Runner3D {
     this.objs.push({ k, l, m, len, y, vz });
   }
 
+  private updateSnack(dt: number) {
+    const idle = this.mode === "idle";
+    const target = idle ? 1 : 0;
+    const s = this.snack.scale.x + (target - this.snack.scale.x) * Math.min(1, dt * (idle ? 6 : 14));
+    const w = this.snack.children[0] as THREE.Mesh | undefined;
+    this.snack.visible = s > 0.02;
+    if (idle && w) {
+      // nibble: lift to the mouth, take a bite every ~0.7s, crumbs fall
+      this.biteT += dt;
+      const nib = Math.max(0, Math.sin(this.biteT * 9));
+      this.snack.position.set(0, 1.08 + nib * 0.03, -0.42 + nib * 0.05);
+      if (this.biteT > 0.7) {
+        this.biteT = 0;
+        w.scale.multiplyScalar(0.88);
+        if (w.scale.x < 0.28) w.scale.setScalar(0.55); // a fresh wedge
+        const at = this.snack.getWorldPosition(new THREE.Vector3());
+        for (let i = 0; i < 4; i++) {
+          const c = new THREE.Mesh(this.geo.box, this.mat.cheese);
+          c.scale.setScalar(0.05 + Math.random() * 0.03);
+          c.position.copy(at);
+          this.scene.add(c);
+          this.crumbs.push({ m: c, v: new THREE.Vector3(rnd(-0.8, 0.8), rnd(0.4, 1.4), rnd(0.2, 1)), t: 0 });
+        }
+      }
+    }
+    this.snack.scale.setScalar(s);
+    for (let i = this.crumbs.length - 1; i >= 0; i--) {
+      const c = this.crumbs[i];
+      c.t += dt; c.v.y -= 6 * dt;
+      c.m.position.addScaledVector(c.v, dt);
+      c.m.rotation.x += dt * 8;
+      if (c.m.position.y < 0.02 || c.t > 1.2) { this.scene.remove(c.m); this.crumbs.splice(i, 1); }
+    }
+  }
+
   private playAnim(name: "run" | "jump" | "slide" | "die" | "idle") {
     const a = this.anims[name] ?? (name === "idle" ? this.anims.run : undefined);
     const key = a ? name : "";
@@ -818,10 +880,11 @@ export class Runner3D {
   private update(dt: number) {
     if (this.paused) return;
     const running = this.mode === "run";
-    if (this.mode === "idle") this.speed = 7;
+    if (this.mode === "idle") this.speed = 0; // the city stands still on the menu
     if (running) {
       this.t += dt;
-      this.speed = 22 + Math.min(26, this.t * 0.45);
+      const ramp = Math.min(1, this.t / 0.9); // ease up to speed after the turn-around
+      this.speed = (22 + Math.min(26, this.t * 0.45)) * (ramp * ramp * (3 - 2 * ramp));
     }
     const dz = this.mode === "dying" || this.mode === "over" ? 0 : this.speed * dt;
 
@@ -847,9 +910,12 @@ export class Runner3D {
     const tx = lx(this.lane);
     this.px += (tx - this.px) * Math.min(1, dt * 18);
     if (this.mode !== "dying" && this.mode !== "over") {
+      const wasAir = this.py > 0.05;
       this.vy -= 34 * dt;
       this.py = Math.max(0, this.py + this.vy * dt);
       if (this.py === 0 && this.vy < 0) this.vy = 0;
+      if (wasAir && this.py === 0) { this.onEvent?.("land"); if (this.jumpBuf > 0 && this.mode === "run") this.doJump(); }
+      this.jumpBuf = Math.max(0, this.jumpBuf - dt);
       this.slide = Math.max(0, this.slide - dt);
     }
     const sliding = this.slide > 0 && this.py < 0.05;
@@ -887,7 +953,7 @@ export class Runner3D {
         } else if (inLane) {
           const near = o.k === "pod" ? z + o.len / 2 : z + 0.15, far = o.k === "pod" ? z - o.len / 2 : z - 0.15;
           if (near > -0.45 && far < 0.45) {
-            if (o.k === "pod" || (o.k === "low" && this.py < 1.0) || (o.k === "high" && !sliding)) { this.mode = "dying"; this.dieT = 0; }
+            if (o.k === "pod" || (o.k === "low" && this.py < 1.0) || (o.k === "high" && !sliding)) { this.mode = "dying"; this.dieT = 0; this.onEvent?.("crash"); }
           }
         }
       }
@@ -911,7 +977,13 @@ export class Runner3D {
       if (this.anims.run) this.anims.run.timeScale = this.mode === "run" ? this.speed / 22 : 1;
       if (this.mode !== "over" || this.curAnim === "die") this.mixer.update(dt);
     }
-    this.holder.position.y = this.mode === "idle" ? Math.sin(performance.now() / 300) * 0.04 : 0;
+    this.holder.position.y = 0;
+    const wantTurn = this.mode === "idle" ? Math.PI : 0;
+    this.turn += (wantTurn - this.turn) * Math.min(1, dt * 9);
+    this.holder.rotation.y = this.turn;
+    this.updateSnack(dt);
+    const fov = this.baseFov + (this.mode === "run" ? Math.min(8, (this.speed - 22) * 0.3) : 0);
+    if (Math.abs(this.camera.fov - fov) > 0.05) { this.camera.fov += (fov - this.camera.fov) * Math.min(1, dt * 3); this.camera.updateProjectionMatrix(); }
     this.shadow.position.set(this.px, 0.02, 0);
     this.shadow.scale.setScalar(Math.max(0.4, 1 - this.py * 0.2));
 
