@@ -1,9 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Fredoka, Nunito } from "next/font/google";
 import "./globals.css";
-
-const head = Fredoka({ variable: "--font-head", subsets: ["latin"], weight: ["500", "600", "700"] });
-const body = Nunito({ variable: "--font-body", subsets: ["latin"], weight: ["500", "700", "800"] });
 
 export const metadata: Metadata = {
   title: "Squeaks — Play Cheese Chase, grow your Burrow",
@@ -16,7 +12,16 @@ export const viewport: Viewport = { themeColor: "#0b1028" };
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body className={`${head.variable} ${body.variable}`}>{children}</body>
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        {/* eslint-disable-next-line @next/next/no-page-custom-font */}
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@500;700;800&display=swap"
+        />
+      </head>
+      <body>{children}</body>
     </html>
   );
 }
