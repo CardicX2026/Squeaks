@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { setRef, TESTING, useAccountState, useGame, useToast } from "@/lib/store";
+import { setRef, useAccountState, useGame, useToast } from "@/lib/store";
 import { useAccount } from "@/components/auth";
 import { CARDICX, DOCS, SOCIALS } from "@/lib/content";
 import { FlakeField, SnowCap } from "@/components/winter";
@@ -164,7 +164,8 @@ export function Shell({ children, theme = "site", footer = false }: { children: 
   const g = useGame();
   const acct = useAccount();
   const saved = useAccountState();
-  const bal = saved ? { cheese: saved.cheese, points: saved.points } : { cheese: g.cheese, points: g.points };
+  // Cheese is shown only from CardicX (signed in); guests see no balance
+  const bal = { cheese: saved ? saved.cheese : null, points: g.points };
   const t = useToast();
   useEffect(() => {
     const r = new URLSearchParams(window.location.search).get("ref");
@@ -192,7 +193,7 @@ export function Shell({ children, theme = "site", footer = false }: { children: 
             {NAV.map((l) => <Link key={l.h} href={l.h} className={on(l.h) ? "on" : ""}>{l.n}</Link>)}
           </div>
           <Link href="/profile" className="wallet" title="Your profile">
-            <Cheese /> <b>{fmt(bal.cheese)}</b><span className="sep" /><span className="pts">{fmt(bal.points)} pts</span>
+            <Cheese /> <b>{bal.cheese === null ? "—" : fmt(bal.cheese)}</b><span className="sep" /><span className="pts">{fmt(bal.points)} pts</span>
           </Link>
           {acct.enabled && (acct.authed
             ? <>
@@ -298,6 +299,5 @@ export function PageHead({ eyebrow, title, children, img }: { eyebrow: string; t
 }
 
 export function Price({ price }: { price: number }) {
-  if (TESTING) return <span className="price"><b className="free">Free</b>{price > 0 && <s><Cheese s={13} /> {fmt(price)}</s>}</span>;
   return <span className="price"><Cheese /> <b>{fmt(price)}</b></span>;
 }

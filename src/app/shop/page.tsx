@@ -2,17 +2,39 @@
 /* eslint-disable @next/next/no-img-element */
 import { useState } from "react";
 import { PageHead, Price, Shell, GameNav } from "@/components/ui";
-import { buy, equip, ITEMS, priceOf, TESTING, toast, useGame, type Cat } from "@/lib/store";
+import { addBoost, addOwned, equip, ITEMS, priceOf, toast, useAccountState, useGame, type Cat } from "@/lib/store";
+import { cheeseMsg, isPaused, useCheese } from "@/lib/cheese-client";
+import { purchase } from "@/lib/purchase";
 
 const CATS: Cat[] = ["Skins", "Hats", "Trails", "Boosts"];
 
 export default function Shop() {
   const g = useGame();
+  const saved = useAccountState();
+  const cheese = useCheese();
+  const [busy, setBusy] = useState("");
+  // debit on CardicX first; grant the item only after a 200
+  const buy = async (id: string, name: string, boost: boolean) => {
+    if (!cheese.authed) return cheese.gate("shop");
+    if (busy) return;
+    setBusy(id);
+    const orderId = crypto.randomUUID(); // one order = one ref, reused if this request is retried
+    try {
+      await purchase(
+        () => cheese.call<{ balance: number; duplicate?: boolean }>("/buy", { itemId: id, orderId }),
+        (r) => {
+          if (boost) { if (!r.duplicate) addBoost(id); toast(`${name} added`); }
+          else { addOwned(id); toast(r.duplicate ? `${name} is already yours` : `${name} unlocked and equipped`); }
+        },
+      );
+    } catch (e) { toast(isPaused(e) ? "Cheese is temporarily unavailable" : cheeseMsg(e)); }
+    finally { setBusy(""); }
+  };
   const [cat, setCat] = useState<Cat>("Skins");
   return (
     <Shell theme="game">
       <PageHead eyebrow="Shop" title={<>Dress the <span className="yel">mouse</span></>} img="space">
-        Skins, hats and trails show up in Cheese Chase. Boosts are used one per run. {TESTING ? "Everything is free during testing." : "Paid for with Cheese."}
+        Skins, hats and trails show up in Cheese Chase. Boosts are used one per run. Paid for with Cheese, the same balance you have on CardicX.
       </PageHead>
       <section className="wrap" style={{ paddingBottom: 0 }}><GameNav /></section>
       <section className="wrap">
@@ -35,7 +57,7 @@ export default function Shop() {
                 <div className="row" style={{ marginTop: "auto" }}>
                   {owned && !boost ? <span className="pill green">Owned</span> : <Price price={i.price} />}
                   {boost || !owned ? (
-                    <button className="btn btn-play btn-sm" disabled={g.cheese < priceOf(i)} onClick={() => buy(i.id) && toast(boost ? `${i.name} added` : `${i.name} unlocked and equipped`)}>{boost ? "Add" : "Get"}</button>
+                    <button className="btn btn-play btn-sm" disabled={busy === i.id || (saved !== null && saved.cheese < priceOf(i))} onClick={() => buy(i.id, i.name, boost)}>{busy === i.id ? "…" : boost ? "Add" : "Get"}</button>
                   ) : (
                     <button className="btn btn-ghost btn-sm" disabled={eq && i.cat === "Skins"} onClick={() => equip(i.id)}>{eq ? (i.cat === "Skins" ? "Equipped" : "Remove") : "Equip"}</button>
                   )}
