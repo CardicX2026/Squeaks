@@ -195,7 +195,10 @@ export function Shell({ children, theme = "site", footer = false }: { children: 
             <Cheese /> <b>{fmt(bal.cheese)}</b><span className="sep" /><span className="pts">{fmt(bal.points)} pts</span>
           </Link>
           {acct.enabled && (acct.authed
-            ? <button className="btn btn-ghost btn-sm hide-m" onClick={acct.logout} title="Log out">{acct.label}</button>
+            ? <>
+                <Link href="/profile" className="acct-chip hide-m" title="Your account"><span className="dot" />{acct.label}</Link>
+                <button className="btn btn-ghost btn-sm hide-m" onClick={acct.logout}>Log out</button>
+              </>
             : <button className="btn btn-ghost btn-sm" onClick={acct.login}>Log in</button>)}
           <Link href="/play" className="btn btn-play btn-sm hide-m">Play now</Link>
         </div>
