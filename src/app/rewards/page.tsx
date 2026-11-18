@@ -1,9 +1,12 @@
 "use client";
 import { Cheese, PageHead, Shell, GameNav } from "@/components/ui";
+import { useAccount } from "@/components/auth";
 import { canClaimDaily, claimDaily, claimMission, dailyReward, missionProgress, MISSIONS, toast, today, useGame } from "@/lib/store";
 
 export default function Rewards() {
   const g = useGame();
+  const acct = useAccount();
+  const needLogin = () => (acct.enabled && !acct.authed ? (acct.gate("claim"), true) : false);
   const can = canClaimDaily(g);
   const yest = new Date(Date.now() - 86400_000).toISOString().slice(0, 10);
   const kept = g.daily.last === today() || g.daily.last === yest;
@@ -25,7 +28,7 @@ export default function Rewards() {
               </div>
             ))}
           </div>
-          <button className="btn btn-play btn-block" disabled={!can} onClick={() => { const n = claimDaily(); if (n) toast(`Daily reward: +${n} Cheese, +5 points`); }}>
+          <button className="btn btn-play btn-block" disabled={!can} onClick={() => { if (needLogin()) return; const n = claimDaily(); if (n) toast(`Daily reward: +${n} Cheese, +5 points`); }}>
             {can ? `Claim ${dailyReward(done + 1)} Cheese + 5 points` : "Claimed. Come back tomorrow"}
           </button>
           <p className="muted small" style={{ marginTop: 12 }}>Miss a day and the streak restarts at day 1. After day 7 it loops.</p>
@@ -42,7 +45,7 @@ export default function Rewards() {
                   <div className="bar" style={{ height: 8, margin: "8px 0 6px" }}><i style={{ width: `${(p / m.of) * 100}%` }} /></div>
                   <span className="muted small" style={{ fontWeight: 800 }}><Cheese s={13} /> +{m.cheese}{m.points ? ` · +${m.points} points` : ""} · {p}/{m.of}</span>
                 </div>
-                <button className="btn btn-play btn-sm" disabled={claimed || p < m.of} onClick={() => claimMission(m.id) && toast(`Mission complete: +${m.cheese} Cheese`)}>{claimed ? "Done" : "Claim"}</button>
+                <button className="btn btn-play btn-sm" disabled={claimed || p < m.of} onClick={() => !needLogin() && claimMission(m.id) && toast(`Mission complete: +${m.cheese} Cheese`)}>{claimed ? "Done" : "Claim"}</button>
               </div>
             );
           })}

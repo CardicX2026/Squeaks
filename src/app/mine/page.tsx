@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Cheese, fmt, GameNav, PageHead, Price, Shell } from "@/components/ui";
 import { SnowCap } from "@/components/winter";
+import { useAccount } from "@/components/auth";
 import {
   MINE_HOURS, MINE_MAX_LEVEL, REF_BONUS, TESTING, mineCollect, mineProgress, mineRate, mineSkip, mineStart,
   mineUpgrade, mineUpgradeCost, mineYield, toast, useGame,
@@ -16,6 +17,8 @@ const clock = (ms: number) => {
 
 export default function Mine() {
   const g = useGame();
+  const acct = useAccount();
+  const needLogin = () => (acct.enabled && !acct.authed ? (acct.gate("mine"), true) : false);
   const [now, setNow] = useState(0);
   useEffect(() => { setNow(Date.now()); const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
   const p = mineProgress(g, now || undefined);
@@ -66,9 +69,9 @@ export default function Mine() {
             </div>
 
             <div style={{ marginTop: 22, display: "grid", gap: 10 }}>
-              {step === 1 && <button className="btn btn-play btn-big btn-block" onClick={() => { mineStart(); toast(`Shift started. Back in ${MINE_HOURS} hours!`); }}>⛏️ Start mining</button>}
+              {step === 1 && <button className="btn btn-play btn-big btn-block" onClick={() => { if (needLogin()) return; mineStart(); toast(`Shift started. Back in ${MINE_HOURS} hours!`); }}>⛏️ Start mining</button>}
               {step === 2 && <button className="btn btn-ghost btn-big btn-block" disabled>Mining… {clock(p.left)}</button>}
-              {step === 3 && <button className="btn btn-play btn-big btn-block" onClick={() => { const n = mineCollect(); if (n) toast(`+${fmt(n)} Cheese collected`); }}>🧀 Collect {fmt(mineYield(lvl))} Cheese</button>}
+              {step === 3 && <button className="btn btn-play btn-big btn-block" onClick={() => { if (needLogin()) return; const n = mineCollect(); if (n) toast(`+${fmt(n)} Cheese collected`); }}>🧀 Collect {fmt(mineYield(lvl))} Cheese</button>}
               {TESTING && step === 2 && <button className="btn btn-ghost btn-sm" onClick={mineSkip}>Testing only: finish the shift now</button>}
             </div>
 
@@ -86,7 +89,7 @@ export default function Mine() {
               <p className="muted">Each level adds a worker and <b style={{ color: "var(--text)" }}>+{fmt(mineYield(1))} Cheese</b> per shift. Upgrade between shifts.</p>
               <div className="row" style={{ marginTop: 16 }}>
                 {lvl < MINE_MAX_LEVEL ? <Price price={100 * lvl * lvl} /> : <span className="muted">Max level reached</span>}
-                <button className="btn btn-play btn-sm" disabled={lvl >= MINE_MAX_LEVEL || p.active || g.cheese < cost} onClick={() => mineUpgrade() && toast(`Crew upgraded to level ${lvl + 1}!`)}>
+                <button className="btn btn-play btn-sm" disabled={lvl >= MINE_MAX_LEVEL || p.active || g.cheese < cost} onClick={() => !needLogin() && mineUpgrade() && toast(`Crew upgraded to level ${lvl + 1}!`)}>
                   {p.active ? "Finish the shift first" : "Upgrade"}
                 </button>
               </div>

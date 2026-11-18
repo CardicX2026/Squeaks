@@ -19,7 +19,7 @@ const FEATURE = [NFTS[0], NFTS[9], NFTS[13], NFTS[20]];
 
 export default function Home() {
   return (
-    <Shell>
+    <Shell footer>
       {/* HERO — winter */}
       <section className="hero winter">
         <FlakeField n={6} />

@@ -114,7 +114,52 @@ export function GameNav() {
   );
 }
 
-export function Shell({ children, theme = "site" }: { children: ReactNode; theme?: "site" | "game" }) {
+const PEEK_LINES = ["gm, trenches!", "Psst… the arcade is open 🧀", "Have you met the CDXLIV crew?", "Mine Cheese while you sleep", "One login for Squeaks + CardicX"];
+/** A mascot that pops up from the corner now and then, waves and says something. Tap to visit the arcade. */
+function PeekMouse() {
+  const [up, setUp] = useState(false);
+  const [line, setLine] = useState(0);
+  useEffect(() => {
+    let t: ReturnType<typeof setTimeout>;
+    const cycle = (first: boolean) => {
+      t = setTimeout(() => { setLine((l) => (l + 1) % PEEK_LINES.length); setUp(true); t = setTimeout(() => { setUp(false); cycle(false); }, 4200); }, first ? 3500 : 14000);
+    };
+    cycle(true);
+    return () => clearTimeout(t);
+  }, []);
+  return (
+    <Link href="/play" className={`peek${up ? " up" : ""}`} aria-label="Go to the arcade" tabIndex={up ? 0 : -1}>
+      <img src="/nft/n19.webp" alt="" />
+      <span className="say">{PEEK_LINES[line]}</span>
+    </Link>
+  );
+}
+
+/** Little burst of cheese from any orange button you press. */
+function useCheeseBurst() {
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const onDown = (e: PointerEvent) => {
+      const b = (e.target as HTMLElement)?.closest?.(".btn-play, .btn-sky, .gm-play");
+      if (!b) return;
+      for (let i = 0; i < 9; i++) {
+        const el = document.createElement("span");
+        el.className = "burst";
+        const a = (i / 9) * Math.PI * 2 + Math.random() * 0.4, d = 50 + Math.random() * 50;
+        el.style.left = `${e.clientX}px`; el.style.top = `${e.clientY}px`;
+        el.style.setProperty("--bx", `${Math.cos(a) * d}px`); el.style.setProperty("--by", `${Math.sin(a) * d - 20}px`); el.style.setProperty("--br", `${(Math.random() - 0.5) * 540}deg`);
+        el.innerHTML = '<svg width="16" height="16" viewBox="0 0 24 24"><path d="M2.5 13.5 19 5.2a2.4 2.4 0 0 1 2.5 2.3V18a2 2 0 0 1-2 2h-15a2 2 0 0 1-2-2z" fill="#ffd23f"/><circle cx="9" cy="16" r="1.8" fill="#e09a00"/><circle cx="15" cy="13.5" r="1.4" fill="#e09a00"/></svg>';
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 750);
+      }
+    };
+    window.addEventListener("pointerdown", onDown);
+    return () => window.removeEventListener("pointerdown", onDown);
+  }, []);
+}
+
+export function Shell({ children, theme = "site", footer = false }: { children: ReactNode; theme?: "site" | "game"; footer?: boolean }) {
+  useCheeseBurst();
   const path = usePathname();
   const g = useGame();
   const acct = useAccount();
@@ -157,7 +202,7 @@ export function Shell({ children, theme = "site" }: { children: ReactNode; theme
         <SnowCap />
       </nav>
       <main>{children}</main>
-      {theme === "site" && (
+      {footer && (
       <footer className="navy">
           <div className="wrap">
             <div className="ftop">
@@ -190,6 +235,7 @@ export function Shell({ children, theme = "site" }: { children: ReactNode; theme
           </div>
         </footer>
       )}
+      {theme === "site" && <PeekMouse />}
       <div className="tabbar">
         {TABS.map((x) => (
           <Link key={x.h} href={x.h} className={on(x.h) ? "on" : ""}>
