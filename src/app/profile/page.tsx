@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { CARDICX, Cheese, fmt, PageHead, Shell, GameNav } from "@/components/ui";
-import { item, ITEMS, resetAll, setHandle, toast, useAccountState, useGame } from "@/lib/store";
+import { item, ITEMS, setHandle, toast, useAccountState, useGame } from "@/lib/store";
 import { useAccount } from "@/components/auth";
 
 export default function Profile() {
@@ -17,8 +17,10 @@ export default function Profile() {
 
   return (
     <Shell theme="game">
-      <PageHead eyebrow="Profile" title={g.handle ? <>@{g.handle}</> : <>Guest <span className="yel">mouse</span></>} img={skin}>
-        You are playing as a guest. Progress is saved on this device until login goes live.
+      <PageHead eyebrow="Profile" title={g.handle ? <>@{g.handle}</> : acct.authed ? <>{acct.label}</> : <>Guest <span className="yel">mouse</span></>} img={skin}>
+        {acct.authed
+          ? "Signed in. Your Cheese lives on your CardicX account, the same balance on both sites."
+          : "Log in with your CardicX account to earn Cheese, mine and save your progress."}
       </PageHead>
       <section className="wrap" style={{ paddingBottom: 0 }}><GameNav /></section>
       <section className="wrap two">
@@ -33,7 +35,18 @@ export default function Profile() {
           </div>
           <div className="card">
             <span className="eyebrow">Handle</span>
-            <form className="copy" onSubmit={(e) => { e.preventDefault(); const v = setHandle(h); toast(v.length >= 3 ? `Handle set to @${v}` : "Use 3 to 20 letters, numbers or _"); }}>
+            <form className="copy" onSubmit={async (e) => {
+              e.preventDefault();
+              const v = h.toLowerCase();
+              if (!/^[a-z0-9_]{3,20}$/.test(v)) return toast("Use 3 to 20 letters, numbers or _");
+              if (!acct.authed) { setHandle(v); return toast(`Handle set to @${v}`); }
+              // signed in: the name is saved on your account (shared with CardicX) so it shows on the leaderboard and chat
+              const t = await acct.token();
+              const r = await fetch("/api/profile", { method: "POST", headers: { "Content-Type": "application/json", Authorization: `Bearer ${t}` }, body: JSON.stringify({ handle: v }) });
+              const j = await r.json().catch(() => ({}));
+              if (r.ok) { setHandle(v); toast(`Handle set to @${v}`); }
+              else toast(j.error === "handle_taken" ? "That name is taken, try another" : j.error === "not_found" || r.status === 404 ? "Names save to your account soon" : "Could not save, try again");
+            }}>
               <input className="inp" value={h} onChange={(e) => setH(e.target.value)} placeholder="your_handle" maxLength={20} />
               <button className="btn btn-play btn-sm">Save</button>
             </form>
@@ -71,7 +84,6 @@ export default function Profile() {
               </div>
             ))}
           </div>
-          <button className="btn btn-ghost btn-sm" onClick={() => { if (confirm("Reset all guest test data on this device?")) { resetAll(); toast("Test data reset"); } }}>Reset test data</button>
         </div>
       </section>
     </Shell>

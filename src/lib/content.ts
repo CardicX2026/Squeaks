@@ -24,8 +24,8 @@ export const MINT = {
  */
 export const GAMES = [
   { id: "cheese-chase", name: "Cheese Chase", desc: "Run the neon rails of Cheese City. Dodge, jump, slide and stack Cheese.", img: "/games/cheese-chase.webp", fallback: "/mice/chase.webp", href: "/play/cheese-chase", live: true },
-  { id: "slot-2", name: "Coming soon", desc: "A new Squeaks game is in the oven. Follow along for the reveal.", img: "/games/slot-2.webp", fallback: "", href: "", live: false },
-  { id: "slot-3", name: "Coming soon", desc: "Another one for the crew. Seasons and prizes to match.", img: "/games/slot-3.webp", fallback: "", href: "", live: false },
+  { id: "hammer", name: "Hammer the Squeaks", desc: "Mice pop up, you bonk them with the golden hammer. Fast hands win the Cheese.", img: "/games/slot-2.webp", fallback: "", href: "", live: false },
+  { id: "says", name: "Squeaks Says", desc: "Watch the pattern, repeat it back. How long can your memory keep up?", img: "/games/slot-3.webp", fallback: "", href: "", live: false },
 ];
 
 export const DOCS = "https://squeaksfun.gitbook.io/squeaks";

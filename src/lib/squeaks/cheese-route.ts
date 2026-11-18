@@ -30,3 +30,15 @@ export async function body(req: Request): Promise<Record<string, unknown>> {
   if (!j || typeof j !== "object" || Array.isArray(j)) throw new BadRequest("bad_json");
   return j as Record<string, unknown>;
 }
+
+/** Public (no login) route with the same CardicX error mapping. */
+export function publicRoute(fn: (req: Request) => Promise<unknown>) {
+  return async (req: Request) => {
+    try { return NextResponse.json(await fn(req)); } catch (e) {
+      if (e instanceof CxError) return NextResponse.json({ error: e.code }, { status: e.status === 401 ? 502 : e.status });
+      if (e instanceof BadRequest) return NextResponse.json({ error: e.message }, { status: 400 });
+      console.error("[public]", e instanceof Error ? e.message : "error");
+      return NextResponse.json({ error: "server_error" }, { status: 500 });
+    }
+  };
+}

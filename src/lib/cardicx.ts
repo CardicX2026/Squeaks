@@ -37,3 +37,23 @@ export function debit(userId: string, amount: number, reason: DebitReason, ref: 
   const raw = JSON.stringify({ user_id: userId, amount: Math.floor(amount), reason, ref });
   return signed<DebitResult>("POST", "/debit", raw);
 }
+
+/* ---- profile, leaderboard and chat (stored on CardicX) ---- */
+export type CxProfile = { user_id: string; handle: string | null; skin: string | null; best_score: number };
+export type CxBoardRow = { handle: string; score: number; skin: string | null; me?: boolean };
+export type CxChat = { id: number; user_id: string; handle: string; skin: string | null; body: string; created_at: string };
+
+export const getProfile = (userId: string) => signed<CxProfile>("GET", `/profile${q({ user_id: userId })}`, "");
+export function setProfile(userId: string, patch: { handle?: string; skin?: string }) {
+  return signed<CxProfile>("POST", "/profile", JSON.stringify({ user_id: userId, ...patch }));
+}
+/** Best-score submission for a verified run; idempotent on ref (run_<id>). */
+export function postScore(userId: string, score: number, ref: string) {
+  return signed<{ best_score: number; duplicate?: boolean }>("POST", "/score", JSON.stringify({ user_id: userId, score: Math.floor(score), ref }));
+}
+export const getLeaderboard = (period: "daily" | "weekly" | "all", limit = 50, userId?: string) =>
+  signed<{ period: string; rows: CxBoardRow[] }>("GET", `/leaderboard${q(userId ? { period, limit, user_id: userId } : { period, limit })}`, "");
+export function postChat(userId: string, body: string, ref: string) {
+  return signed<{ message: CxChat; duplicate?: boolean }>("POST", "/chat", JSON.stringify({ user_id: userId, body, ref }));
+}
+export const getChat = (afterId = 0, limit = 50) => signed<{ messages: CxChat[] }>("GET", `/chat${q({ after_id: afterId, limit })}`, "");

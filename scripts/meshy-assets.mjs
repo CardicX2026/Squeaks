@@ -17,6 +17,10 @@ const JOBS = {
   // props: text -> low-poly textured mesh
   "cheese": { kind: "prop", poly: 2500, prompt: "a single chunky wedge of yellow swiss cheese with round holes, stylized cartoon game collectible, smooth clean shapes, glossy" },
   "pod": { kind: "prop", poly: 6000, prompt: "a futuristic rounded cargo pod vehicle on rails, long capsule shape, teal and white panels with glowing cyan light strips, round headlights at the front, stylized cartoon game asset" },
+  // in-run boosters (gaming style)
+  "hoverboard": { kind: "prop", dir: "boost", poly: 3500, prompt: "a futuristic hoverboard with no wheels, sleek rounded deck, glowing cyan underside thrusters and orange neon trim, stylized cartoon video game item" },
+  "magnet": { kind: "prop", dir: "boost", poly: 2000, prompt: "a chunky red and silver horseshoe magnet power-up with a glossy finish, stylized cartoon video game pickup" },
+  "star2x": { kind: "prop", dir: "boost", poly: 2000, prompt: "a chunky golden five-pointed star power-up with a big raised 2x on the front, glossy, stylized cartoon video game pickup" },
   // city decoration (placed along the street and on rooftops)
   "water_tank": { kind: "prop", dir: "decor", poly: 3000, prompt: "a rooftop wooden water tower tank on four metal legs with a conical roof, stylized cartoon city game asset, warm wood and dark metal" },
   "kiosk": { kind: "prop", dir: "decor", poly: 4000, prompt: "a small street snack kiosk booth with an orange striped awning, glowing menu board and a serving window, stylized cartoon city game asset" },

@@ -7,7 +7,7 @@ import {
   canClaimDaily, dailyReward, finishRun, getGame, item, markDaily, missionProgress, MISSIONS,
   spendBoosts, toast, useGame, useToast,
 } from "@/lib/store";
-import type { Action, Runner3D } from "@/game/runner3d";
+import type { Action, PowerKind, Runner3D } from "@/game/runner3d";
 import { audio } from "@/game/audio";
 import { useAccount } from "@/components/auth";
 import { useAccountState } from "@/lib/store";
@@ -45,6 +45,7 @@ export default function CheeseChase() {
   const [ready, setReady] = useState(false);
   const [pick, setPick] = useState<string[]>([]);
   const [active, setActive] = useState<string[]>([]);
+  const [powers, setPowers] = useState<{ k: PowerKind; left: number; total: number }[]>([]);
   type Fly = { id: number; x: number; y: number; tx: number; ty: number };
   const [flyers, setFlyers] = useState<Fly[]>([]);
   const flyId = useRef(0);
@@ -79,6 +80,7 @@ export default function CheeseChase() {
         },
         // a collected wedge flies from where it was picked up into the HUD counter
         onEvent: (ev) => audio().sfx(ev),
+        onPowers: (p) => setPowers(p),
         onPickup: (x, y) => {
           audio().sfx("pickup");
           const st = stage.current?.getBoundingClientRect(), pr = pillRef.current?.getBoundingClientRect();
@@ -90,10 +92,11 @@ export default function CheeseChase() {
       // equipped shop skin, if it has a 3D model; otherwise the default mouse
       const skinUrl = item(getGame().equip.Skins)?.model;
       const url = skinUrl || undefined; // a missing file falls back to the default mouse
-      const [model, props, decor] = await Promise.all([m.preloadMouse((p) => !dead && setLoad(Math.min(0.99, p)), url), m.preloadProps(), m.preloadDecor()]);
+      const [model, props, decor, boosts] = await Promise.all([m.preloadMouse((p) => !dead && setLoad(Math.min(0.99, p)), url), m.preloadProps(), m.preloadDecor(), m.preloadBoosts()]);
       if (dead) return;
       e.setProps(props);
       e.setDecor(decor);
+      e.setBoosts(boosts);
       e.setMouse(model);
       setLoad(1);
     });
@@ -132,6 +135,7 @@ export default function CheeseChase() {
   const play = () => (acct.enabled && !acct.authed ? acct.gate("play", () => start(true)) : start(false));
   const start = (asGuest = false) => {
     practice.current = asGuest;
+    setPowers([]);
     audio().unlock();
     ticketRef.current = null;
     if (!asGuest && acct.authed) cheese.call<{ ticket: string }>("/run/start", {}).then((r) => { ticketRef.current = r.ticket; }).catch(() => {});
@@ -249,6 +253,15 @@ export default function CheeseChase() {
           <span key={f.id} className="flyer" style={{ left: f.x, top: f.y, ["--tx" as string]: `${f.tx}px`, ["--ty" as string]: `${f.ty}px` }}
             onAnimationEnd={() => { setFlyers((fs) => fs.filter((x) => x.id !== f.id)); bump(); }}><Cheese s={24} /></span>
         ))}
+        {(phase === "run" || phase === "paused") && powers.length > 0 && (
+          <div className="pw-bar" aria-label="Active boosters">
+            {powers.map((p) => (
+              <span key={p.k} className={`pw pw-${p.k}`} style={{ ["--p" as string]: `${(p.left / p.total) * 100}%` }}>
+                {p.k === "magnet" ? "🧲" : p.k === "double" ? "⭐" : "🛹"}<i>{Math.ceil(p.left)}</i>
+              </span>
+            ))}
+          </div>
+        )}
         {phase === "run" && <div className="hint">Swipe ← → · ↑ jump · ↓ slide</div>}
 
         {phase === "paused" && (

@@ -19,11 +19,11 @@ export default function Leaderboard() {
 
   useEffect(() => {
     let on = true;
-    fetch(`/api/squeaks/leaderboard?period=${period}&limit=20`).then((r) => (r.ok ? r.json() : null)).then((j) => {
+    fetch(`/api/leaderboard?period=${period}`).then((r) => (r.ok ? r.json() : null)).then((j) => {
       const raw = j?.rows ?? j?.data?.rows;
       if (!on) return;
       setLive(Array.isArray(raw) && raw.length
-        ? raw.map((r: Record<string, unknown>, i: number) => ({ handle: String(r.handle ?? `mouse_${i + 1}`), score: Number(r.score ?? r.best_score ?? 0), img: AV[i % AV.length] }))
+        ? raw.map((r: Record<string, unknown>, i: number) => ({ handle: String(r.handle ?? `mouse_${i + 1}`), score: Number(r.score ?? 0), img: String((r.skin && item(String(r.skin))?.img) || AV[i % AV.length]) }))
         : null);
     }).catch(() => on && setLive(null));
     return () => { on = false; };
@@ -31,7 +31,7 @@ export default function Leaderboard() {
 
   const base = live ?? SAMPLE.map((r) => ({ ...r, score: period === "weekly" ? Math.round(r.score * 1.6) : r.score }));
   const rows: Row[] = g.best > 0 && !live
-    ? [...base, { handle: g.handle || "you (guest)", score: g.best, img: item(g.equip.Skins)?.img ?? "shades", me: true }].sort((a, b) => b.score - a.score)
+    ? [...base, { handle: g.handle || "you", score: g.best, img: item(g.equip.Skins)?.img ?? "shades", me: true }].sort((a, b) => b.score - a.score)
     : base;
 
   return (
@@ -46,7 +46,7 @@ export default function Leaderboard() {
             <div className="tabs">
               {(["daily", "weekly"] as const).map((p) => <button key={p} className={`tab${p === period ? " on" : ""}`} onClick={() => setPeriod(p)}>{p[0].toUpperCase() + p.slice(1)}</button>)}
             </div>
-            <span className={`pill ${live ? "green" : "gray"}`}>{live ? "Live" : "Sample data"}</span>
+            <span className={`pill ${live ? "green" : "gray"}`}>{live ? "Live" : "Preview"}</span>
           </div>
           {rows.map((r, i) => (
             <div key={r.handle + i} className={`lb-row${i === 0 ? " r1" : ""}${r.me ? " me" : ""}`}>
@@ -56,7 +56,7 @@ export default function Leaderboard() {
               <span className="sc">{fmt(r.score)}</span>
             </div>
           ))}
-          {!live && <p className="muted small" style={{ marginTop: 14 }}>The other names are placeholders until the live board is connected. Your own best run is real.</p>}
+          {!live && <p className="muted small" style={{ marginTop: 14 }}>The live board appears as soon as the first verified runs land. These names are a preview; your own best run is real.</p>}
         </div>
         <div style={{ marginTop: 20, textAlign: "center" }}><Link href="/play" className="btn btn-play">Beat your best: {fmt(g.best)}</Link></div>
       </section>

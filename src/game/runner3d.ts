@@ -16,10 +16,12 @@ import * as SkeletonUtils from "three/examples/jsm/utils/SkeletonUtils.js";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 
 export type Action = "l" | "r" | "j" | "s";
-export type GameEvent = "jump" | "slide" | "lane" | "crash" | "start" | "land";
+export type GameEvent = "jump" | "slide" | "lane" | "crash" | "start" | "land" | "powerup" | "shield";
 export type RunOpts = { trail: string; magnet: boolean; double: boolean; head: boolean };
-type Kind = "c" | "low" | "high" | "pod";
-type Obj = { k: Kind; l: number; m: THREE.Object3D; len: number; y: number; hit?: boolean; ht?: number; vz?: number };
+type Kind = "c" | "low" | "high" | "pod" | "pw";
+export type PowerKind = "magnet" | "double" | "hover";
+const POWER_SECS: Record<PowerKind, number> = { magnet: 15, double: 15, hover: 20 };
+type Obj = { k: Kind; l: number; m: THREE.Object3D; len: number; y: number; hit?: boolean; ht?: number; vz?: number; pw?: PowerKind };
 
 export const MOUSE_URL = "/models/mouse.glb";
 const CAR = 9.5, CAR_GAP = 0.6, WALL = 12;
@@ -126,6 +128,36 @@ export function preloadDecor() {
     return out;
   })();
   return decorPromise;
+}
+
+export type Boosts = Partial<Record<"hoverboard" | "magnet" | "star2x", THREE.Object3D>>;
+let boostPromise: Promise<Boosts> | null = null;
+/** Optional Meshy booster models in /models/boost (hoverboard ridden under the mouse; pickups float in the lanes). */
+export function preloadBoosts() {
+  if (!boostPromise) boostPromise = (async () => {
+    const loader = new GLTFLoader();
+    loader.setMeshoptDecoder(MeshoptDecoder);
+    const out: Boosts = {};
+    const size = { hoverboard: 1.5, magnet: 0.8, star2x: 0.85 } as const;
+    await Promise.all((Object.keys(size) as (keyof typeof size)[]).map(async (k) => {
+      try {
+        const o = (await loader.loadAsync(`/models/boost/${k}.glb`)).scene;
+        let box = new THREE.Box3().setFromObject(o);
+        const sz = box.getSize(new THREE.Vector3());
+        if (k === "hoverboard" && sz.x > sz.z) o.rotation.y = Math.PI / 2; // long side along the track
+        box = new THREE.Box3().setFromObject(o);
+        const s2 = box.getSize(new THREE.Vector3());
+        o.scale.multiplyScalar(size[k] / Math.max(s2.x, s2.y, s2.z));
+        box = new THREE.Box3().setFromObject(o);
+        const c = box.getCenter(new THREE.Vector3());
+        o.position.sub(c);
+        const wrap = new THREE.Group(); wrap.add(o);
+        out[k] = wrap;
+      } catch { /* optional */ }
+    }));
+    return out;
+  })();
+  return boostPromise;
 }
 
 /* ---------- textures drawn in code ---------- */
@@ -275,6 +307,25 @@ export class Runner3D {
   private holder = new THREE.Group();
   private board = new THREE.Group();
   private props: Props = {};
+  private boosts: Boosts = {};
+  private power: Record<PowerKind, number> = { magnet: 0, double: 0, hover: 0 };
+  private invuln = 0;
+  private lastPower = -999;
+  private hoverRoot = new THREE.Group();
+  private powerT = 0;
+  private onPowers?: (p: { k: PowerKind; left: number; total: number }[]) => void;
+  setBoosts(b: Boosts) {
+    this.boosts = b;
+    this.hoverRoot.clear();
+    const board = b.hoverboard ? b.hoverboard.clone() : (() => {
+      const g = new THREE.Group();
+      const deck = new THREE.Mesh(new RoundedBoxGeometry(0.9, 0.1, 1.7, 3, 0.05), new THREE.MeshStandardMaterial({ color: 0x1b2a5c, emissive: 0x2b6cff, emissiveIntensity: 0.5, metalness: 0.4, roughness: 0.3 }));
+      const glow = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.03, 1.4), new THREE.MeshBasicMaterial({ color: new THREE.Color(0x38e8ff).multiplyScalar(2.5), toneMapped: false }));
+      glow.position.y = -0.07; g.add(deck, glow); return g;
+    })();
+    this.hoverRoot.add(board);
+    const light = new THREE.PointLight(0x38e8ff, 6, 4); light.position.y = -0.3; this.hoverRoot.add(light);
+  }
   setProps(p: Props) { this.props = p; }
   private mixer: THREE.AnimationMixer | null = null;
   private anims: Partial<Record<"run" | "jump" | "slide" | "die" | "idle", THREE.AnimationAction>> = {};
@@ -288,9 +339,9 @@ export class Runner3D {
   private speed = 8; private t = 0; private next = 0; private score = 0; private cheese = 0;
   private dieT = 0; private opts: RunOpts = { trail: "", magnet: false, double: false, head: false };
 
-  constructor(el: HTMLElement, cb: { onHud: (s: number, c: number) => void; onEnd: (s: number, c: number) => void; onPickup?: (x: number, y: number) => void; onEvent?: (e: GameEvent) => void }) {
+  constructor(el: HTMLElement, cb: { onHud: (s: number, c: number) => void; onEnd: (s: number, c: number) => void; onPickup?: (x: number, y: number) => void; onEvent?: (e: GameEvent) => void; onPowers?: (p: { k: PowerKind; left: number; total: number }[]) => void }) {
     this.el = el;
-    this.onHud = cb.onHud; this.onEnd = cb.onEnd; this.onPickup = cb.onPickup; this.onEvent = cb.onEvent;
+    this.onHud = cb.onHud; this.onEnd = cb.onEnd; this.onPickup = cb.onPickup; this.onEvent = cb.onEvent; this.onPowers = cb.onPowers;
     this.renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -364,6 +415,7 @@ export class Runner3D {
     this.opts = opts;
     this.lane = 1; this.px = 0; this.py = 0; this.vy = 0; this.slide = 0;
     this.dist = 0; this.busy = [0, 0, 0];
+    this.power = { magnet: 0, double: 0, hover: 0 }; this.invuln = 0; this.lastPower = -999;
     this.speed = 22; this.t = 0; this.next = 30; this.cheese = 0; this.score = opts.head ? 500 : 0;
     this.setTrail(opts.trail);
     this.mode = "run";
@@ -797,10 +849,34 @@ export class Runner3D {
     const cl = open[Math.floor(Math.random() * open.length)];
     const arc = row[cl] === "low";
     for (let i = 0; i < 5; i++) this.add("c", cl, SPAWN_Z + (i - 2) * 2.4, arc ? [0.9, 1.9, 2.5, 1.9, 0.9][i] : 0.9);
+    // a booster about every 300-450 units, in an open lane (not under a duck gantry)
+    if (this.dist - this.lastPower > 300 && Math.random() < 0.35) {
+      const lanes = open.filter((l) => row[l] !== "high");
+      if (lanes.length) {
+        this.lastPower = this.dist;
+        const pw: PowerKind = (["magnet", "double", "hover"] as const)[Math.floor(Math.random() * 3)];
+        this.add("pw", lanes[Math.floor(Math.random() * lanes.length)], SPAWN_Z - 8, 1.1, undefined, pw);
+      }
+    }
   }
 
-  private add(k: Kind, l: number, z: number, y = 0, train?: { n: number; moving: boolean }) {
+  private add(k: Kind, l: number, z: number, y = 0, train?: { n: number; moving: boolean }, pw?: PowerKind) {
     let m: THREE.Object3D, len = 0, vz = 0;
+    if (k === "pw") {
+      const src = pw === "magnet" ? this.boosts.magnet : pw === "double" ? this.boosts.star2x : this.boosts.hoverboard;
+      const g = new THREE.Group();
+      if (src) g.add(src.clone());
+      else g.add(new THREE.Mesh(new THREE.IcosahedronGeometry(0.4, 1), new THREE.MeshStandardMaterial({ color: pw === "magnet" ? 0xe5383b : pw === "double" ? 0xffc83d : 0x38e8ff, emissive: pw === "magnet" ? 0x7a1010 : pw === "double" ? 0x8a6000 : 0x0a5a70, roughness: 0.3 })));
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.62, 0.035, 8, 40), new THREE.MeshBasicMaterial({ color: new THREE.Color(0xffffff).multiplyScalar(1.8), toneMapped: false }));
+      g.add(ring);
+      g.position.y = y;
+      m = g;
+      const objPw = pw;
+      m.position.x = lx(l); m.position.z = z;
+      this.scene.add(m);
+      this.objs.push({ k, l, m, len: 0, y, pw: objPw });
+      return;
+    }
     if (k === "c" && this.props.cheese) {
       m = this.props.cheese.clone();
       m.position.y = y;
@@ -939,32 +1015,68 @@ export class Runner3D {
           continue;
         }
         if (o.k === "c") { o.m.rotation.y += dt * 3; o.m.position.y = o.y + Math.sin(this.t * 4 + o.m.position.z) * 0.08; }
+        if (o.k === "pw") { o.m.rotation.y += dt * 2.5; o.m.position.y = o.y + Math.sin(this.t * 5) * 0.12; if (o.hit) { o.m.visible = false; continue; } }
+        // magnet: cheese ahead flies to the mouse
+        if (o.k === "c" && !o.hit && running && this.power.magnet > 0 && o.m.position.z > -14 && o.m.position.z < 1) {
+          const k2 = Math.min(1, dt * 7);
+          o.m.position.x += (this.px - o.m.position.x) * k2;
+          o.m.position.z += (0 - o.m.position.z) * k2 * 0.6;
+          o.y += (this.py + 1.0 - o.y) * k2;
+        }
         if (o.hit || !running) continue;
         const z = o.m.position.z;
         const inLane = Math.abs(lx(o.l) - this.px) < 1.0;
         if (o.k === "c") {
-          if (Math.abs(z) < 0.9 && (this.opts.magnet || (inLane && o.y > bodyLo - 0.5 && o.y < bodyHi + 0.4))) {
-            o.hit = true; o.ht = 0; this.cheese += this.opts.double ? 2 : 1;
+          const pulled = this.power.magnet > 0 && Math.abs(o.m.position.x - this.px) < 0.6;
+          if (Math.abs(z) < 0.9 && (this.opts.magnet || pulled || (inLane && o.y > bodyLo - 0.5 && o.y < bodyHi + 0.4))) {
+            o.hit = true; o.ht = 0; this.cheese += this.opts.double || this.power.double > 0 ? 2 : 1;
             if (this.onPickup) {
               const v = o.m.getWorldPosition(new THREE.Vector3()).project(this.camera);
               this.onPickup((v.x + 1) / 2 * this.el.clientWidth, (1 - v.y) / 2 * this.el.clientHeight);
             }
           }
-        } else if (inLane) {
+        } else if (o.k === "pw") {
+          if (inLane && Math.abs(z) < 1.0 && o.y > bodyLo - 0.6 && o.y < bodyHi + 0.6 && o.pw) {
+            o.hit = true;
+            this.power[o.pw] = POWER_SECS[o.pw];
+            this.onEvent?.("powerup");
+          }
+        } else if (inLane && this.invuln <= 0) {
           const near = o.k === "pod" ? z + o.len / 2 : z + 0.15, far = o.k === "pod" ? z - o.len / 2 : z - 0.15;
           if (near > -0.45 && far < 0.45) {
-            if (o.k === "pod" || (o.k === "low" && this.py < 1.0) || (o.k === "high" && !sliding)) { this.mode = "dying"; this.dieT = 0; this.onEvent?.("crash"); }
+            if (o.k === "pod" || (o.k === "low" && this.py < 1.0) || (o.k === "high" && !sliding)) {
+              if (this.power.hover > 0) {
+                // the hoverboard takes the hit instead of the mouse
+                this.power.hover = 0; this.invuln = 1.2; o.hit = true;
+                this.onEvent?.("shield");
+              } else { this.mode = "dying"; this.dieT = 0; this.onEvent?.("crash"); }
+            }
           }
         }
       }
       for (let i = this.objs.length - 1; i >= 0; i--) {
         const o = this.objs[i];
-        if ((o.hit && o.k === "c" && (o.ht ?? 0) > 0.18) || o.m.position.z - o.len / 2 > 14) { this.scene.remove(o.m); this.objs.splice(i, 1); }
+        if ((o.hit && o.k === "c" && (o.ht ?? 0) > 0.18) || (o.hit && o.k === "pw") || o.m.position.z - o.len / 2 > 14) { this.scene.remove(o.m); this.objs.splice(i, 1); }
       }
       if (running) this.onHud(Math.floor(this.score), this.cheese);
     }
 
     // player pose
+    if (running) {
+      for (const k of Object.keys(this.power) as PowerKind[]) this.power[k] = Math.max(0, this.power[k] - dt);
+      this.invuln = Math.max(0, this.invuln - dt);
+      this.powerT += dt;
+      if (this.powerT > 0.2 && this.onPowers) {
+        this.powerT = 0;
+        this.onPowers((Object.keys(this.power) as PowerKind[]).filter((k) => this.power[k] > 0).map((k) => ({ k, left: this.power[k], total: POWER_SECS[k] })));
+      }
+    }
+    const hovering = this.power.hover > 0 && (running || this.mode === "dying");
+    if (hovering && !this.hoverRoot.parent) this.rig.add(this.hoverRoot);
+    if (!hovering && this.hoverRoot.parent) this.rig.remove(this.hoverRoot);
+    this.hoverRoot.position.y = 0.25 + Math.sin(performance.now() / 160) * 0.05;
+    this.holder.position.y = hovering ? 0.32 : 0;
+    this.rig.visible = this.invuln <= 0 || Math.floor(this.invuln * 12) % 2 === 0; // blink after a saved crash
     this.rig.position.set(this.px, this.py, 0);
     this.rig.rotation.z = (this.px - tx) * 0.12;
     this.rig.rotation.x = this.vy > 0 ? -0.12 : 0;
@@ -977,7 +1089,7 @@ export class Runner3D {
       if (this.anims.run) this.anims.run.timeScale = this.mode === "run" ? this.speed / 22 : 1;
       if (this.mode !== "over" || this.curAnim === "die") this.mixer.update(dt);
     }
-    this.holder.position.y = 0;
+    this.holder.position.y = this.power.hover > 0 && this.mode !== "idle" ? 0.32 : 0; // ride on the hoverboard
     const wantTurn = this.mode === "idle" ? Math.PI : 0;
     this.turn += (wantTurn - this.turn) * Math.min(1, dt * 9);
     this.holder.rotation.y = this.turn;

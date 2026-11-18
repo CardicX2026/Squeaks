@@ -72,11 +72,11 @@ export function CountUp({ to, dur = 1400, suffix = "" }: { to: number; dur?: num
 
 const NAV = [
   { h: "/", n: "Home" }, { h: "/token", n: "Token" }, { h: "/nfts", n: "NFTs" }, { h: "/play", n: "Arcade" },
-  { h: "/mine", n: "Mine" }, { h: "/rewards", n: "Rewards" },
+  { h: "/mine", n: "Mine" }, { h: "/rewards", n: "Rewards" }, { h: "/chat", n: "Chat" },
 ];
 export const GAME_NAV = [
   { h: "/play", n: "Arcade" }, { h: "/mine", n: "Mine" }, { h: "/shop", n: "Shop" },
-  { h: "/rewards", n: "Rewards" }, { h: "/leaderboard", n: "Leaderboard" }, { h: "/profile", n: "Profile" },
+  { h: "/rewards", n: "Rewards" }, { h: "/leaderboard", n: "Leaderboard" }, { h: "/chat", n: "Chat" }, { h: "/profile", n: "Profile" },
 ];
 
 /* Colourful tab icons (original artwork, drawn in code) */

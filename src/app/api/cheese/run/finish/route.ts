@@ -1,4 +1,4 @@
-import { credit } from "@/lib/cardicx";
+import { credit, postScore } from "@/lib/cardicx";
 import { RUN_CHEESE_CAP } from "@/lib/catalog";
 import { verify } from "@/lib/squeaks/ticket";
 import { BadRequest, body, cheeseRoute } from "@/lib/squeaks/cheese-route";
@@ -18,7 +18,9 @@ export const POST = cheeseRoute(async (req, userId) => {
   if (!Number.isFinite(score) || !Number.isFinite(cheese) || score < 0 || cheese < 0) throw new BadRequest("bad_values");
   const secs = ms / 1000;
   if (score > secs * MAX_SCORE_PER_SEC + 600 || cheese > secs * MAX_CHEESE_PER_SEC + 5) throw new BadRequest("implausible_run");
+  // verified score goes to the CardicX leaderboard (best effort: never blocks the Cheese)
+  const score_saved = await postScore(userId, score, `run_${t.rid}`).then(() => true).catch(() => false);
   const amount = Math.min(RUN_CHEESE_CAP, cheese);
-  if (amount <= 0) return { credited: 0, capped: false, balance: null };
-  return credit(userId, amount, "game_run", `run_${t.rid}`);
+  if (amount <= 0) return { credited: 0, capped: false, balance: null, score_saved };
+  return { ...(await credit(userId, amount, "game_run", `run_${t.rid}`)), score_saved };
 });
