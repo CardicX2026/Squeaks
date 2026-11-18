@@ -748,3 +748,5 @@ body:has(.site) { background: #f2f8ff; }
 .chat-send { display: flex; gap: 8px; padding: 12px; border-top: 1px solid var(--line); }
 .chat-send .inp { border-radius: 999px; }
 @media (max-width: 600px) { .chat { height: calc(100dvh - 300px); min-height: 380px; } }
+/* bigger game view on wide screens (phones stay full screen) */
+@media (min-width: 700px) { .gstage { width: min(100vw, calc(100dvh * 0.8)); } }

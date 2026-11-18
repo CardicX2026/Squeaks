@@ -16,7 +16,7 @@ import * as SkeletonUtils from "three/examples/jsm/utils/SkeletonUtils.js";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 
 export type Action = "l" | "r" | "j" | "s";
-export type GameEvent = "jump" | "slide" | "lane" | "crash" | "start" | "land" | "powerup" | "shield";
+export type GameEvent = "jump" | "slide" | "laneL" | "laneR" | "crash" | "start" | "land" | "powerup" | "shield";
 export type RunOpts = { trail: string; magnet: boolean; double: boolean; head: boolean };
 type Kind = "c" | "low" | "high" | "pod" | "pw";
 export type PowerKind = "magnet" | "double" | "hover";
@@ -160,6 +160,30 @@ export function preloadBoosts() {
   return boostPromise;
 }
 
+/** Optional animated chaser (an original cartoon cat) at /models/chars/cat.glb. */
+let catPromise: Promise<MouseAsset | null> | null = null;
+export function preloadChaser() {
+  if (!catPromise) catPromise = new Promise((res) => {
+    const loader = new GLTFLoader(); loader.setMeshoptDecoder(MeshoptDecoder);
+    loader.load("/models/chars/cat.glb", (g) => res({ scene: g.scene, animations: g.animations }), undefined, () => res(null));
+  });
+  return catPromise;
+}
+export type City = Partial<Record<"bld_apartment" | "bld_corner", THREE.Object3D>>;
+let cityPromise: Promise<City> | null = null;
+/** Optional Meshy buildings at /models/city; they replace some of the code-built blocks. */
+export function preloadCity() {
+  if (!cityPromise) cityPromise = (async () => {
+    const loader = new GLTFLoader(); loader.setMeshoptDecoder(MeshoptDecoder);
+    const out: City = {};
+    await Promise.all((["bld_apartment", "bld_corner"] as const).map(async (k) => {
+      try { out[k] = (await loader.loadAsync(`/models/city/${k}.glb`)).scene; } catch { /* optional */ }
+    }));
+    return out;
+  })();
+  return cityPromise;
+}
+
 /* ---------- textures drawn in code ---------- */
 function canvasTex(w: number, h: number, draw: (c: CanvasRenderingContext2D) => void) {
   const c = document.createElement("canvas");
@@ -172,16 +196,58 @@ function canvasTex(w: number, h: number, draw: (c: CanvasRenderingContext2D) => 
 }
 const WINDOW_TINTS = [["#ffd27a", "#ffb35c"], ["#8fd3ff", "#5fa8ff"], ["#ff9ad5", "#c58bff"], ["#9dffcf", "#ffd27a"]];
 function windowTex(i: number) {
+  // brick/concrete facade with framed windows, sills, curtains, the odd AC unit and floor ledges
+  const wall = ["#2a2346", "#31263f", "#22304a", "#2e2a40"][i % 4];
   const t = canvasTex(128, 256, (c) => {
-    c.fillStyle = "#0b0e2c"; c.fillRect(0, 0, 128, 256);
-    for (let y = 0; y < 8; y++) for (let x = 0; x < 4; x++) {
-      const lit = Math.random() < 0.55;
-      c.fillStyle = lit ? WINDOW_TINTS[i][Math.random() < 0.7 ? 0 : 1] : "#161b46";
-      c.fillRect(10 + x * 30, 10 + y * 31, 18, 20);
+    c.fillStyle = wall; c.fillRect(0, 0, 128, 256);
+    c.fillStyle = "rgba(255,255,255,.035)";
+    for (let y = 0; y < 256; y += 6) for (let x = (y / 6) % 2 ? 0 : 8; x < 128; x += 16) c.fillRect(x, y, 15, 5); // brick rows
+    for (let y = 0; y < 8; y++) {
+      c.fillStyle = "rgba(0,0,0,.35)"; c.fillRect(0, y * 32 + 30, 128, 2); // floor ledge shadow
+      c.fillStyle = "rgba(255,255,255,.08)"; c.fillRect(0, y * 32 + 29, 128, 1);
+      for (let x = 0; x < 4; x++) {
+        const wx = 9 + x * 30, wy = 6 + y * 32, lit = Math.random() < 0.55;
+        c.fillStyle = "#151022"; c.fillRect(wx - 2, wy - 2, 22, 25); // frame
+        const glow = WINDOW_TINTS[i][Math.random() < 0.7 ? 0 : 1];
+        c.fillStyle = lit ? glow : "#1a2147"; c.fillRect(wx, wy, 18, 21);
+        if (lit && Math.random() < 0.5) { c.fillStyle = "rgba(120,40,60,.55)"; c.fillRect(wx, wy, 7, 21); } // curtain
+        c.fillStyle = "rgba(0,0,0,.45)"; c.fillRect(wx + 8, wy, 2, 21); c.fillRect(wx, wy + 10, 18, 2); // mullions
+        c.fillStyle = "rgba(255,255,255,.12)"; c.fillRect(wx - 2, wy + 22, 22, 2); // sill
+        if (!lit && Math.random() < 0.12) { c.fillStyle = "#8f97ad"; c.fillRect(wx + 3, wy + 14, 12, 7); } // AC unit
+      }
     }
   });
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
   return t;
+}
+/** CardicX "join the waitlist" billboard (CardicX blue). */
+function adTex(wide = false) {
+  return canvasTex(wide ? 1024 : 512, wide ? 128 : 224, (c) => {
+    const W = wide ? 1024 : 512, H = wide ? 128 : 224;
+    const g = c.createLinearGradient(0, 0, W, H); g.addColorStop(0, "#1b4dff"); g.addColorStop(1, "#0a1c5c");
+    c.fillStyle = g; c.fillRect(0, 0, W, H);
+    c.strokeStyle = "rgba(255,255,255,.85)"; c.lineWidth = 6; c.strokeRect(6, 6, W - 12, H - 12);
+    c.fillStyle = "#fff"; c.textBaseline = "middle";
+    if (wide) {
+      c.font = "bold 64px system-ui, sans-serif"; c.fillText("CardicX", 40, H / 2);
+      c.font = "bold 40px system-ui, sans-serif"; c.fillStyle = "#ffc83d"; c.fillText("JOIN THE WAITLIST  ·  cardicx.com", 330, H / 2);
+    } else {
+      c.font = "bold 76px system-ui, sans-serif"; c.textAlign = "center"; c.fillText("CardicX", W / 2, 78);
+      c.font = "bold 34px system-ui, sans-serif"; c.fillStyle = "#ffc83d"; c.fillText("JOIN THE WAITLIST", W / 2, 140);
+      c.font = "600 26px system-ui, sans-serif"; c.fillStyle = "rgba(255,255,255,.85)"; c.fillText("Trade smarter · cardicx.com", W / 2, 184);
+    }
+  });
+}
+function storefrontTex() {
+  const pal = [["#f28c3f", "#fff7ee"], ["#3a8dde", "#fff7ee"], ["#e5383b", "#fff7ee"], ["#2bb3a3", "#fff7ee"]][Math.floor(Math.random() * 4)];
+  return canvasTex(256, 96, (c) => {
+    c.fillStyle = "#1c1730"; c.fillRect(0, 0, 256, 96);
+    for (let i = 0; i < 16; i++) { c.fillStyle = i % 2 ? pal[0] : pal[1]; c.fillRect(i * 16, 0, 16, 18); } // awning stripes
+    c.fillStyle = "rgba(255,214,140,.85)"; c.fillRect(14, 30, 140, 58); // glowing shop window
+    c.fillStyle = "rgba(0,0,0,.25)"; c.fillRect(82, 30, 3, 58);
+    c.fillStyle = "#2b1e12"; c.fillRect(176, 34, 52, 62); // door
+    c.fillStyle = "rgba(255,214,140,.6)"; c.fillRect(184, 42, 36, 24);
+  });
 }
 /** Original trackside murals: colour blocks, cheese wedges, stars and SQKS tags. */
 function muralTex(v: number) {
@@ -277,6 +343,52 @@ export class Runner3D {
   private crumbs: { m: THREE.Mesh; v: THREE.Vector3; t: number }[] = [];
   private biteT = 0;
   private street: THREE.Object3D[] = [];
+  private cat = new THREE.Group();
+  private catMixer: THREE.AnimationMixer | null = null;
+  private catZ = 14; // behind the camera = out of view
+  private catNear = 0; // seconds the cat stays close
+  /** The chaser: normalised to ~2.1 tall, facing down the track, playing its run animation. */
+  setChaser(a: MouseAsset | null) {
+    this.cat.clear(); this.catMixer = null;
+    if (!a) return;
+    const m = SkeletonUtils.clone(a.scene);
+    m.updateMatrixWorld(true);
+    let box = new THREE.Box3().setFromObject(m, true);
+    m.scale.multiplyScalar(1.85 / box.getSize(new THREE.Vector3()).y);
+    m.updateMatrixWorld(true);
+    box = new THREE.Box3().setFromObject(m, true);
+    const c = box.getCenter(new THREE.Vector3());
+    m.position.set(-c.x, -box.min.y, -c.z);
+    m.rotation.y = Math.PI;
+    this.cat.add(m);
+    if (a.animations.length) {
+      this.catMixer = new THREE.AnimationMixer(m);
+      const clip = a.animations.find((x) => /^(?!.*jump).*(run|jog|sprint)/i.test(x.name)) ?? a.animations[0];
+      this.catMixer.clipAction(clip).play();
+    }
+    this.cat.visible = false;
+    this.scene.add(this.cat);
+  }
+  /** Swap about a third of the code-built blocks for detailed Meshy buildings, facing the track. */
+  setCity(c: City) {
+    const models = [c.bld_apartment, c.bld_corner].filter(Boolean) as THREE.Object3D[];
+    if (!models.length) return;
+    this.buildings.forEach((b, i) => {
+      if (i % 3 !== 1) return;
+      const { w, d } = b.g.userData as { w: number; d: number };
+      const src = models[i % models.length].clone();
+      src.rotation.y = -b.side * Math.PI / 2; // front faces the track
+      const holder = new THREE.Group(); holder.add(src);
+      let box = new THREE.Box3().setFromObject(holder);
+      const sz = box.getSize(new THREE.Vector3());
+      holder.scale.setScalar(Math.min(d / sz.z, (w + 2) / sz.x) * 1.0);
+      box = new THREE.Box3().setFromObject(holder);
+      const cc = box.getCenter(new THREE.Vector3());
+      src.position.x -= cc.x / holder.scale.x; src.position.z -= cc.z / holder.scale.x; src.position.y -= box.min.y / holder.scale.x;
+      b.g.children.forEach((ch) => { ch.visible = false; });
+      b.g.add(holder);
+    });
+  }
   /** Place city props: water towers on some rooftops, shops and street furniture along both sidewalks. */
   setDecor(d: Decor) {
     if (d.water_tank) for (const b of this.buildings) {
@@ -416,6 +528,7 @@ export class Runner3D {
     this.lane = 1; this.px = 0; this.py = 0; this.vy = 0; this.slide = 0;
     this.dist = 0; this.busy = [0, 0, 0];
     this.power = { magnet: 0, double: 0, hover: 0 }; this.invuln = 0; this.lastPower = -999;
+    this.catZ = 3.6; this.catNear = 2.0; // the cat starts right behind you
     this.speed = 22; this.t = 0; this.next = 30; this.cheese = 0; this.score = opts.head ? 500 : 0;
     this.setTrail(opts.trail);
     this.mode = "run";
@@ -433,8 +546,8 @@ export class Runner3D {
 
   act(a: Action) {
     if (this.mode !== "run") return;
-    if (a === "l" && this.lane > 0) { this.lane--; this.onEvent?.("lane"); }
-    if (a === "r" && this.lane < 2) { this.lane++; this.onEvent?.("lane"); }
+    if (a === "l" && this.lane > 0) { this.lane--; this.onEvent?.("laneL"); }
+    if (a === "r" && this.lane < 2) { this.lane++; this.onEvent?.("laneR"); }
     if (a === "j") {
       if (this.py < 0.05) this.doJump();
       else this.jumpBuf = 0.18; // pressed a touch early: jump on landing
@@ -575,12 +688,14 @@ export class Runner3D {
 
     // ---------- trackside walls with original murals ----------
     const murals = [0, 1, 2, 3, 4, 5].map((v) => muralTex(v));
+    const wallAd = adTex(true);
     const wallGeo = new THREE.BoxGeometry(0.4, 1.1, WALL);
     const capGeo = new THREE.BoxGeometry(0.55, 0.12, WALL);
     const capMat = new THREE.MeshStandardMaterial({ color: 0x8e95ad, roughness: 0.7 });
     for (const side of [-1, 1]) for (let i = 0; i < 22; i++) {
       const g = new THREE.Group();
-      const mat = new THREE.MeshStandardMaterial({ color: 0xffffff, map: murals[(i * 7 + (side + 1)) % murals.length], roughness: 0.8 });
+      const isAd = i % 5 === 2;
+      const mat = isAd ? new THREE.MeshBasicMaterial({ map: wallAd, toneMapped: false }) : new THREE.MeshStandardMaterial({ color: 0xffffff, map: murals[(i * 7 + (side + 1)) % murals.length], roughness: 0.8 });
       const w = new THREE.Mesh(wallGeo, [mat, mat, capMat, capMat, capMat, capMat]);
       w.position.y = 0.55;
       const cap = new THREE.Mesh(capGeo, capMat); cap.position.y = 1.16;
@@ -599,7 +714,7 @@ export class Runner3D {
       for (const x of [-5.4, 5.4]) { const p = new THREE.Mesh(new THREE.BoxGeometry(0.9, 7, 0.9), concrete); p.position.set(x, 3.5, 0); g.add(p); }
       const neonBar = new THREE.Mesh(new THREE.BoxGeometry(15, 0.1, 0.1), new THREE.MeshBasicMaterial({ color: new THREE.Color(0xf28c3f).multiplyScalar(2.2), toneMapped: false }));
       neonBar.position.set(0, 6.72, 1.62); g.add(neonBar);
-      const sign = new THREE.Mesh(new THREE.PlaneGeometry(5.2, 0.8), new THREE.MeshBasicMaterial({ map: signTex("SQKS LINE", "#ffc83d"), transparent: true, toneMapped: false }));
+      const sign = new THREE.Mesh(new THREE.PlaneGeometry(i === 1 ? 9 : 5.2, i === 1 ? 1.1 : 0.8), new THREE.MeshBasicMaterial({ map: i === 1 ? adTex(true) : signTex("SQKS LINE", "#ffc83d"), transparent: i !== 1, toneMapped: false }));
       sign.position.set(0, 7.2, 1.62); g.add(sign);
       const rail = new THREE.Mesh(new THREE.BoxGeometry(15, 0.5, 0.08), concrete); rail.position.set(0, 7.9, 1.55); g.add(rail);
       g.position.z = -90 - i * 110;
@@ -610,6 +725,10 @@ export class Runner3D {
     // buildings with lit windows, neon roof lines and signs
     const winTex = [0, 1, 2, 3].map(windowTex);
     const signs = [["SQUEAKS", "#ffd23f"], ["CHEESE", "#ff6ad5"], ["24H MART", "#5fe3ff"], ["CHEESE CITY", "#9dffcf"], ["RAT RADIO", "#ff9a4d"]];
+    const ad = adTex(), adMat = new THREE.MeshBasicMaterial({ map: ad, toneMapped: false });
+    const storeMats = [0, 1, 2, 3].map(() => new THREE.MeshStandardMaterial({ map: storefrontTex(), emissive: 0xffffff, emissiveMap: undefined, emissiveIntensity: 0.0, roughness: 0.7 }));
+    storeMats.forEach((m) => { m.emissiveMap = m.map; m.emissiveIntensity = 0.55; });
+    let adCount = 0;
     const box = new THREE.BoxGeometry(1, 1, 1);
     for (const side of [-1, 1]) {
       let z = 16;
@@ -626,7 +745,16 @@ export class Runner3D {
         const neon = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.18, d), new THREE.MeshBasicMaterial({ color: neonCol.multiplyScalar(2.2), toneMapped: false }));
         neon.position.set(-side * w / 2, h, 0);
         g.add(neon);
-        if (Math.random() < 0.4 && h > 11) {
+        // ground-floor shopfront facing the track, a parapet on the roof
+        const store = new THREE.Mesh(new THREE.PlaneGeometry(d * 0.86, 3.2), storeMats[Math.floor(Math.random() * storeMats.length)]);
+        store.position.set(-side * (w / 2 + 0.03), 1.6, 0); store.rotation.y = -side * Math.PI / 2; g.add(store);
+        const parapet = new THREE.Mesh(box, new THREE.MeshStandardMaterial({ color: 0x3a3456, roughness: 0.8 }));
+        parapet.scale.set(w + 0.3, 0.5, d + 0.3); parapet.position.y = h + 0.25; g.add(parapet);
+        // CardicX waitlist billboards (every few buildings)
+        if (h > 12 && (adCount++ % 4 === 1)) {
+          const bb = new THREE.Mesh(new THREE.PlaneGeometry(Math.min(d * 0.8, 7.5), Math.min(d * 0.8, 7.5) * 0.44), adMat);
+          bb.position.set(-side * (w / 2 + 0.06), rnd(6.5, h - 4), 0); bb.rotation.y = -side * Math.PI / 2; g.add(bb);
+        } else if (Math.random() < 0.4 && h > 11) {
           const [txt, col] = signs[Math.floor(Math.random() * signs.length)];
           const sign = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 1.6), new THREE.MeshBasicMaterial({ map: signTex(txt, col), transparent: true, toneMapped: false }));
           sign.position.set(-side * (w / 2 + 0.05), rnd(6, h - 3), 0);
@@ -833,13 +961,18 @@ export class Runner3D {
       return r < 0.32 - hard * 0.12 ? null : r < 0.52 ? "low" : r < 0.7 ? "high" : "pod";
     });
     // never block all three lanes: trains + busy lanes must leave one passable lane
+    // a train already on screen counts as blocking its lane; while a moving train is coming, no new trains spawn
+    const trainAhead = (l: number) => this.objs.some((o) => o.k === "pod" && o.l === l && o.m.position.z - o.len / 2 < 2);
+    const movingAlive = this.objs.some((o) => o.k === "pod" && (o.vz ?? 0) > 0 && o.m.position.z - o.len / 2 < 2);
+    row.forEach((k, l) => { if (k === "pod" && movingAlive) row[l] = "low"; });
     const blocked = () => row.filter((k) => k === "pod" || k === "busy").length;
     for (let l = 0; l < 3 && blocked() > 2; l++) if (row[l] === "pod") row[l] = "low";
     if (blocked() === 3) return;
     row.forEach((k, l) => {
       if (k === "pod") {
         const n = 1 + (Math.random() < 0.35 + hard * 0.3 ? 1 : 0) + (Math.random() < hard * 0.4 ? 1 : 0);
-        const moving = Math.random() < 0.12 + hard * 0.25;
+        // a moving train only when no other lane has a train anywhere ahead (it would catch up and wall you in)
+        const moving = Math.random() < 0.12 + hard * 0.25 && ![0, 1, 2].some((x) => x !== l && (trainAhead(x) || row[x] === "pod" || this.busy[x] > this.dist));
         const len = n * CAR + (n - 1) * CAR_GAP;
         this.busy[l] = this.dist + len + (moving ? 70 : 6);
         this.add("pod", l, SPAWN_Z, 0, { n, moving });
@@ -1047,7 +1180,7 @@ export class Runner3D {
             if (o.k === "pod" || (o.k === "low" && this.py < 1.0) || (o.k === "high" && !sliding)) {
               if (this.power.hover > 0) {
                 // the hoverboard takes the hit instead of the mouse
-                this.power.hover = 0; this.invuln = 1.2; o.hit = true;
+                this.power.hover = 0; this.invuln = 1.2; o.hit = true; this.catNear = 3.2; // the cat catches up
                 this.onEvent?.("shield");
               } else { this.mode = "dying"; this.dieT = 0; this.onEvent?.("crash"); }
             }
@@ -1099,15 +1232,25 @@ export class Runner3D {
     this.shadow.position.set(this.px, 0.02, 0);
     this.shadow.scale.setScalar(Math.max(0.4, 1 - this.py * 0.2));
 
+    // the chaser: close at the start, after a saved crash and when you crash; otherwise it falls back out of view
+    if (this.cat.children.length) {
+      const active = this.mode === "run" || this.mode === "dying" || this.mode === "over";
+      if (this.mode === "run") this.catNear = Math.max(0, this.catNear - dt);
+      const want = !active ? 14 : this.mode !== "run" ? 1.6 : this.catNear > 0 ? 3.6 : 12;
+      this.catZ += (want - this.catZ) * Math.min(1, dt * (want < this.catZ ? 3 : 1.2));
+      this.cat.visible = active && this.catZ < 8;
+      this.cat.position.set(this.px * 0.8 + (this.px > 0.5 ? -1.1 : 1.1), 0, this.catZ); // off to the side so the mouse stays visible
+      if (this.mode !== "over") this.catMixer?.update(dt * (this.mode === "run" ? this.speed / 22 : 1));
+    }
     // camera
     const camX = this.px * 0.55;
-    this.camera.position.set(camX, 3.9 + this.py * 0.25, 7.6);
+    this.camera.position.set(camX, 3.4 + this.py * 0.25, 6.7);
     if (this.mode === "dying") {
       this.dieT += dt;
       this.camera.position.x += (Math.random() - 0.5) * 0.25 * (1 - this.dieT / 0.5);
       this.camera.position.y += (Math.random() - 0.5) * 0.25 * (1 - this.dieT / 0.5);
       if (this.dieT > 0.5) { this.mode = "over"; this.onEnd(Math.floor(this.score), this.cheese); }
     }
-    this.camera.lookAt(camX * 0.6, 1.0, -8);
+    this.camera.lookAt(camX * 0.6, 1.15, -8);
   }
 }

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Cheese, fmt } from "@/components/ui";
+import { GameIcon } from "@/components/game-icons";
 import {
   canClaimDaily, dailyReward, finishRun, getGame, item, markDaily, missionProgress, MISSIONS,
   spendBoosts, toast, useGame, useToast,
@@ -17,9 +18,9 @@ type Res = { score: number; cheese: number | null; points: number; best: boolean
 type Phase = "menu" | "run" | "paused" | "over";
 const KEYS: Record<string, Action> = { ArrowLeft: "l", a: "l", ArrowRight: "r", d: "r", ArrowUp: "j", w: "j", " ": "j", ArrowDown: "s", s: "s" };
 const BOOSTS = [
-  { id: "boost_magnet", n: "Magnet", e: "🧲", d: "Pulls Cheese from every lane" },
-  { id: "boost_double", n: "Double", e: "✨", d: "Double Cheese this run" },
-  { id: "boost_head", n: "Head start", e: "🚀", d: "Start at 500 score" },
+  { id: "boost_magnet", n: "Magnet", e: "magnet" as const, d: "Pulls Cheese from every lane" },
+  { id: "boost_double", n: "Double", e: "star" as const, d: "Double Cheese this run" },
+  { id: "boost_head", n: "Head start", e: "rocket" as const, d: "Start at 500 score" },
 ];
 
 export default function CheeseChase() {
@@ -92,11 +93,13 @@ export default function CheeseChase() {
       // equipped shop skin, if it has a 3D model; otherwise the default mouse
       const skinUrl = item(getGame().equip.Skins)?.model;
       const url = skinUrl || undefined; // a missing file falls back to the default mouse
-      const [model, props, decor, boosts] = await Promise.all([m.preloadMouse((p) => !dead && setLoad(Math.min(0.99, p)), url), m.preloadProps(), m.preloadDecor(), m.preloadBoosts()]);
+      const [model, props, decor, boosts, chaser, city] = await Promise.all([m.preloadMouse((p) => !dead && setLoad(Math.min(0.99, p)), url), m.preloadProps(), m.preloadDecor(), m.preloadBoosts(), m.preloadChaser(), m.preloadCity()]);
       if (dead) return;
       e.setProps(props);
       e.setDecor(decor);
       e.setBoosts(boosts);
+      e.setChaser(chaser);
+      e.setCity(city);
       e.setMouse(model);
       setLoad(1);
     });
@@ -184,19 +187,19 @@ export default function CheeseChase() {
             <div className="gm-top">
               <Link href="/shop" className="gm-pill"><Cheese s={18} /><b>{saved ? fmt(saved.cheese) : "—"}</b><span className="plus">+</span></Link>
               <span className="gm-pill pts"><span className="star">★</span><b>{fmt(saved?.points ?? g.points)}</b></span>
-              <button className={`gm-round sm${snd.music ? "" : " off"}`} onClick={() => toggle2("music")} aria-label={snd.music ? "Music off" : "Music on"} aria-pressed={snd.music} title="Music">♫</button>
-              <button className={`gm-round sm${snd.sfx ? "" : " off"}`} onClick={() => toggle2("sfx")} aria-label={snd.sfx ? "Sound effects off" : "Sound effects on"} aria-pressed={snd.sfx} title="Sound effects">🔊</button>
-              <Link href="/play" className="gm-round sm" aria-label="Back to the arcade">✕</Link>
+              <button className={`gm-round sm${snd.music ? "" : " off"}`} onClick={() => toggle2("music")} aria-label={snd.music ? "Music off" : "Music on"} aria-pressed={snd.music} title="Music"><GameIcon n="music" s={20} /></button>
+              <button className={`gm-round sm${snd.sfx ? "" : " off"}`} onClick={() => toggle2("sfx")} aria-label={snd.sfx ? "Sound effects off" : "Sound effects on"} aria-pressed={snd.sfx} title="Sound effects"><GameIcon n="sound" s={20} /></button>
+              <Link href="/play" className="gm-round sm" aria-label="Back to the arcade"><GameIcon n="close" s={18} /></Link>
             </div>
 
             <div className="gm-cols">
               <div className="gm-side">
-                <div className="gm-card"><span className="gm-ic">🏆</span><div><small>High score</small><b>{fmt(g.best)}</b></div></div>
-                <div className="gm-card"><span className="gm-ic">🏃</span><div><small>Runs today</small><b>{g.day.runs}</b></div></div>
+                <div className="gm-card"><span className="gm-ic"><GameIcon n="trophy" /></span><div><small>High score</small><b>{fmt(g.best)}</b></div></div>
+                <div className="gm-card"><span className="gm-ic"><GameIcon n="runner" /></span><div><small>Runs today</small><b>{g.day.runs}</b></div></div>
                 <div className="gm-icons">
-                  <Link href="/rewards" className="gm-icon" aria-label="Missions">🎯{claimable > 0 && <i className="gm-badge">{claimable}</i>}</Link>
-                  <Link href="/leaderboard" className="gm-icon" aria-label="Leaderboard">📊</Link>
-                  <Link href="/shop" className="gm-icon" aria-label="Shop">🛍️</Link>
+                  <Link href="/rewards" className="gm-icon" aria-label="Missions"><GameIcon n="missions" s={28} />{claimable > 0 && <i className="gm-badge">{claimable}</i>}</Link>
+                  <Link href="/leaderboard" className="gm-icon" aria-label="Leaderboard"><GameIcon n="board" s={28} /></Link>
+                  <Link href="/shop" className="gm-icon" aria-label="Shop"><GameIcon n="shop" s={28} /></Link>
                 </div>
               </div>
               <div className="gm-side right">
@@ -209,7 +212,7 @@ export default function CheeseChase() {
                     else { audio().unlock(); audio().sfx("gift"); toast(`Daily gift: +${r.credited} Cheese`); }
                   }).catch((e) => toast(cheeseMsg(e)));
                 }}>
-                  <span className="gm-ic big">🎁</span>
+                  <span className="gm-ic big"><GameIcon n="gift" s={32} /></span>
                   <span><b>{gift ? "FREE" : "Claimed"}</b><small>{gift ? `${dailyReward(0)} Cheese` : "Back tomorrow"}</small></span>
                   {gift && <i className="gm-badge">1</i>}
                 </button>
@@ -219,7 +222,7 @@ export default function CheeseChase() {
                     const n = g.boosts[b.id] ?? 0, on = pick.includes(b.id);
                     return (
                       <button key={b.id} className={`gm-boost${on ? " on" : ""}`} disabled={n === 0} onClick={() => toggle(b.id)} title={b.d} aria-pressed={on}>
-                        <span>{b.e}</span><em>{b.n}</em><i>{n}</i>
+                        <span><GameIcon n={b.e} s={22} /></span><em>{b.n}</em><i>{n}</i>
                       </button>
                     );
                   })}
@@ -243,9 +246,9 @@ export default function CheeseChase() {
           <div className="gm-hud">
             <span className="hud-pill"><span ref={scoreEl}>0</span></span>
             <div className="gm-hud-r">
-              {active.map((id) => <span key={id} className="hud-boost">{BOOSTS.find((b) => b.id === id)?.e}</span>)}
+              {active.map((id) => <span key={id} className="hud-boost">{(() => { const e = BOOSTS.find((b) => b.id === id)?.e; return e ? <GameIcon n={e} s={20} /> : null; })()}</span>)}
               <span className="hud-pill" ref={pillRef}><Cheese s={18} /> <span ref={cheeseEl}>0</span></span>
-              <button className="gm-round" onPointerDown={(e) => e.stopPropagation()} onClick={pause} aria-label="Pause">❚❚</button>
+              <button className="gm-round" onPointerDown={(e) => e.stopPropagation()} onClick={pause} aria-label="Pause"><GameIcon n="pause" s={18} /></button>
             </div>
           </div>
         )}
@@ -257,7 +260,7 @@ export default function CheeseChase() {
           <div className="pw-bar" aria-label="Active boosters">
             {powers.map((p) => (
               <span key={p.k} className={`pw pw-${p.k}`} style={{ ["--p" as string]: `${(p.left / p.total) * 100}%` }}>
-                {p.k === "magnet" ? "🧲" : p.k === "double" ? "⭐" : "🛹"}<i>{Math.ceil(p.left)}</i>
+                <GameIcon n={p.k === "magnet" ? "magnet" : p.k === "double" ? "star" : "hover"} s={26} /><i>{Math.ceil(p.left)}</i>
               </span>
             ))}
           </div>

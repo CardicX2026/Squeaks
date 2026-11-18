@@ -4,7 +4,7 @@
  * - SFX: polished game sounds through a compressor.
  * - Voice: an original squeaky "mouse" voice (pitch-gliding chirps through a formant filter).
  */
-export type Sfx = "pickup" | "jump" | "slide" | "lane" | "crash" | "land" | "start" | "click" | "gift" | "powerup" | "shield";
+export type Sfx = "pickup" | "jump" | "slide" | "lane" | "laneL" | "laneR" | "crash" | "land" | "start" | "click" | "gift" | "powerup" | "shield";
 
 const KEY = "sq_audio_v1";
 const BPM = 124;
@@ -79,6 +79,21 @@ class GameAudio {
     s.connect(f); f.connect(g); g.connect(dest); s.start(t);
   }
 
+  /** A fast airy whoosh: band-passed noise sweeping between two pitches, optionally panned. */
+  private whoosh(t: number, dur: number, from: number, to: number, vol: number, pan = 0) {
+    const c = this.ctx!, n = Math.ceil(c.sampleRate * dur);
+    const buf = c.createBuffer(1, n, c.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+    const src = c.createBufferSource(); src.buffer = buf;
+    const bp = c.createBiquadFilter(); bp.type = "bandpass"; bp.Q.value = 2.2;
+    bp.frequency.setValueAtTime(from, t); bp.frequency.exponentialRampToValueAtTime(to, t + dur * 0.8);
+    const hp = c.createBiquadFilter(); hp.type = "highpass"; hp.frequency.value = 250;
+    const g = c.createGain();
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + dur * 0.35); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    const p = c.createStereoPanner(); p.pan.setValueAtTime(-pan, t); p.pan.linearRampToValueAtTime(pan, t + dur);
+    src.connect(bp); bp.connect(hp); hp.connect(g); g.connect(p); p.connect(this.sfxBus); src.start(t);
+  }
+
   /* ---------- the squeaky mouse voice ---------- */
   private chirp(t: number, f0: number, f1: number, dur: number, vol = 0.22) {
     const c = this.ctx!;
@@ -122,16 +137,12 @@ class GameAudio {
         if (this.combo === 12) this.voice("yum");
         break;
       }
-      case "jump":
-        this.osc("sine", 280, t, 0.24, 0.24, out, 720);
-        this.noise(t, 0.16, 0.06, "highpass", 2000, 6000, out);
-        this.voice("wee");
-        break;
-      case "slide":
-        this.noise(t, 0.34, 0.16, "bandpass", 3200, 500, out, 0.8);
-        this.voice("whoa");
-        break;
-      case "lane": this.noise(t, 0.11, 0.07, "bandpass", 1400, 3800, out, 1.4); break;
+      // swipes: quick wind whooshes (up rises, down falls, left/right pan with the move)
+      case "jump": this.whoosh(t, 0.26, 500, 3600, 0.34); this.osc("sine", 240, t, 0.16, 0.08, out, 520); break;
+      case "slide": this.whoosh(t, 0.3, 3800, 420, 0.34); break;
+      case "laneL": this.whoosh(t, 0.17, 1200, 3200, 0.28, -0.75); break;
+      case "laneR": this.whoosh(t, 0.17, 1200, 3200, 0.28, 0.75); break;
+      case "lane": this.whoosh(t, 0.17, 1200, 3200, 0.28); break;
       case "land": this.osc("sine", 130, t, 0.1, 0.18, out, 70); this.noise(t, 0.05, 0.04, "lowpass", 900, 300, out); break;
       case "crash":
         this.osc("sine", 120, t, 0.45, 0.4, out, 40);
