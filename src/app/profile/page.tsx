@@ -42,7 +42,12 @@ export default function Profile() {
             <span className="eyebrow" style={{ color: "var(--cx)" }}>CardicX account</span>
             <p className="muted" style={{ margin: "12px 0 16px" }}>Connect to save progress across devices and redeem your Squeaks rewards in the CardicX Rewards Center.</p>
             <div className="row" style={{ justifyContent: "flex-start" }}>
-              <button className="btn btn-cx btn-sm" onClick={() => (acct.enabled ? (acct.authed ? acct.logout() : acct.login()) : toast("Login switches on once the Privy app ID is added"))}>{acct.authed ? `Signed in as ${acct.label} · Log out` : "Log in with CardicX"}</button>
+              {acct.authed
+                ? <>
+                    <span className="pill green"><span className="dot" /> Signed in as {acct.label}</span>
+                    <button className="btn btn-ghost btn-sm" onClick={acct.logout}>Log out</button>
+                  </>
+                : <button className="btn btn-cx btn-sm" onClick={() => (acct.enabled ? acct.login() : toast("Login switches on once the Privy app ID is added"))}>Log in with CardicX</button>}
               <a className="cxl" href={CARDICX} target="_blank" rel="noreferrer">cardicx.com ↗</a>
             </div>
           </div>
