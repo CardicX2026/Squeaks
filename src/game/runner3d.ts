@@ -16,9 +16,9 @@ import * as SkeletonUtils from "three/examples/jsm/utils/SkeletonUtils.js";
 import { RoundedBoxGeometry } from "three/examples/jsm/geometries/RoundedBoxGeometry.js";
 
 export type Action = "l" | "r" | "j" | "s";
-export type GameEvent = "jump" | "slide" | "laneL" | "laneR" | "crash" | "start" | "land" | "powerup" | "shield";
-export type RunOpts = { trail: string; magnet: boolean; double: boolean; head: boolean };
-type Kind = "c" | "low" | "high" | "pod" | "pw";
+export type GameEvent = "jump" | "slide" | "laneL" | "laneR" | "crash" | "start" | "land" | "powerup" | "shield" | "mystery";
+export type RunOpts = { trail: string; magnet: boolean; double: boolean; head: boolean; /** distance at which the CardicX mystery box appears (once) */ mysteryAt?: number };
+type Kind = "c" | "low" | "high" | "pod" | "pw" | "mb";
 export type PowerKind = "magnet" | "double" | "hover";
 const POWER_SECS: Record<PowerKind, number> = { magnet: 15, double: 15, hover: 20 };
 type Obj = { k: Kind; l: number; m: THREE.Object3D; len: number; y: number; hit?: boolean; ht?: number; vz?: number; pw?: PowerKind };
@@ -424,6 +424,19 @@ export class Runner3D {
   private invuln = 0;
   private lastPower = -999;
   private hoverRoot = new THREE.Group();
+  private boardTop = 0.08; // height of the hoverboard deck above its centre
+  // hoverboard stance: the rig's own bones are bent in code (knees bent, arms out, body sideways)
+  private ride = 0;
+  private rideBones: { b: THREE.Object3D; q: THREE.Quaternion; save: THREE.Quaternion; legs: boolean }[] = [];
+  private toes: THREE.Object3D[] = [];
+  private model: THREE.Object3D | null = null;
+  // a calm stretch now and then (Cheese only, no obstacles)
+  private calmUntil = 0; private nextCalm = 0;
+  private mystery = false; private mysteryDone = false;
+  private mbTpl: THREE.Group | null = null;
+  private catX = 0;
+  /** True when this run picked up the CardicX mystery box. */
+  get gotMystery() { return this.mystery; }
   private powerT = 0;
   private onPowers?: (p: { k: PowerKind; left: number; total: number }[]) => void;
   setBoosts(b: Boosts) {
@@ -436,6 +449,7 @@ export class Runner3D {
       glow.position.y = -0.07; g.add(deck, glow); return g;
     })();
     this.hoverRoot.add(board);
+    this.boardTop = Math.max(0.04, new THREE.Box3().setFromObject(board).max.y);
     const light = new THREE.PointLight(0x38e8ff, 6, 4); light.position.y = -0.3; this.hoverRoot.add(light);
   }
   setProps(p: Props) { this.props = p; }
@@ -503,6 +517,23 @@ export class Runner3D {
     m.position.x -= c.x; m.position.z -= c.z; m.position.y += BOARD_TOP - box.min.y;
     m.rotation.y = Math.PI; // face down the track, back to the camera
     this.holder.add(m);
+    this.model = m; this.rideBones = []; this.toes = [];
+    // model space: the mouse faces +Z, its left is +X. Values are radians added on top of the animation.
+    const STANCE: [RegExp, number, number, number, boolean][] = [
+      [/(^|:)Spine\d*$/, 0.1, -0.13, 0, false],
+      [/(^|:)neck$/i, -0.22, -0.1, 0, false],
+      [/(^|:)LeftUpLeg$/, -0.85, 0, 0.2, true], [/(^|:)RightUpLeg$/, -0.85, 0, -0.2, true],
+      [/(^|:)LeftLeg$/, 1.45, 0, 0, true], [/(^|:)RightLeg$/, 1.45, 0, 0, true],
+      [/(^|:)LeftFoot$/, -0.6, 0, 0, true], [/(^|:)RightFoot$/, -0.6, 0, 0, true],
+      [/(^|:)LeftArm$/, 0.15, 0, 0.95, false], [/(^|:)RightArm$/, 0.15, 0, -0.95, false],
+      [/(^|:)LeftForeArm$/, 0, 0, 0.35, false], [/(^|:)RightForeArm$/, 0, 0, -0.35, false],
+    ];
+    m.traverse((o) => {
+      const st = STANCE.find(([re]) => re.test(o.name));
+      if (st) this.rideBones.push({ b: o, q: new THREE.Quaternion().setFromEuler(new THREE.Euler(st[1], st[2], st[3])), save: new THREE.Quaternion(), legs: st[4] });
+      if (/(^|:)(Left|Right)ToeBase$/.test(o.name)) this.toes.push(o);
+    });
+    if (!this.toes.length) m.traverse((o) => { if (/(^|:)(Left|Right)Foot$/.test(o.name)) this.toes.push(o); });
     // Animations: matched by keywords in the clip name, so any Meshy/Mixamo export works.
     if (model.animations.length) {
       this.mixer = new THREE.AnimationMixer(m);
@@ -528,8 +559,9 @@ export class Runner3D {
     this.lane = 1; this.px = 0; this.py = 0; this.vy = 0; this.slide = 0;
     this.dist = 0; this.busy = [0, 0, 0];
     this.power = { magnet: 0, double: 0, hover: 0 }; this.invuln = 0; this.lastPower = -999;
-    this.catZ = 3.6; this.catNear = 2.0; // the cat starts right behind you
-    this.speed = 22; this.t = 0; this.next = 30; this.cheese = 0; this.score = opts.head ? 500 : 0;
+    this.catZ = 3.9; this.catNear = 3.5; this.catX = 0; // the cat starts right behind you
+    this.mystery = false; this.mysteryDone = false; this.calmUntil = 0; this.nextCalm = 1300;
+    this.speed = 16; this.t = 0; this.next = 30; this.cheese = 0; this.score = opts.head ? 500 : 0;
     this.setTrail(opts.trail);
     this.mode = "run";
     this.jumpBuf = 0;
@@ -952,13 +984,36 @@ export class Runner3D {
   }
 
   /* ----- spawning ----- */
+  /** A calm row: a weaving line of Cheese and nothing to dodge. */
+  private calmRow() {
+    const l = Math.floor(Math.random() * 3);
+    for (let i = 0; i < 5; i++) this.add("c", l, SPAWN_Z + (i - 2) * 2.4, 0.9);
+    this.placeMystery([0, 1, 2].filter((x) => this.busy[x] <= this.dist && x !== l));
+  }
+  /** The CardicX mystery box, once per run, in a lane with nothing else in it. */
+  private placeMystery(lanes: number[]) {
+    if (this.opts.mysteryAt === undefined || this.mysteryDone || this.dist < this.opts.mysteryAt || !lanes.length) return;
+    this.mysteryDone = true;
+    this.add("mb", lanes[Math.floor(Math.random() * lanes.length)], SPAWN_Z - 14, 1.05);
+  }
+
   private spawnRow() {
-    const hard = Math.min(1, this.t / 70);
+    // every ~1,100 m after the first 40 s: a clear stretch to enjoy
+    if (this.dist < this.calmUntil) return this.calmRow();
+    if (this.t > 40 && this.dist >= this.nextCalm) {
+      this.calmUntil = this.dist + 170; this.nextCalm = this.dist + 1100;
+      return this.calmRow();
+    }
+    const hard = Math.min(1, Math.max(0, this.t - 12) / 75);
+    const early = this.t < 22; // the first 20 s: one thing to dodge at a time, no trains at first
     const free = [0, 1, 2].map((l) => this.busy[l] <= this.dist);
+    let kept = false;
     const row: (Kind | "busy" | null)[] = [0, 1, 2].map((l) => {
       if (!free[l]) return "busy";
       const r = Math.random();
-      return r < 0.32 - hard * 0.12 ? null : r < 0.52 ? "low" : r < 0.7 ? "high" : "pod";
+      let k: Kind | null = r < 0.32 - hard * 0.12 ? null : r < 0.52 ? "low" : r < 0.7 ? "high" : "pod";
+      if (early && k) { if (kept || Math.random() < 0.35) k = null; else { kept = true; if (k === "pod" && this.t < 9) k = "low"; } }
+      return k;
     });
     // never block all three lanes: trains + busy lanes must leave one passable lane
     // a train already on screen counts as blocking its lane; while a moving train is coming, no new trains spawn
@@ -972,7 +1027,7 @@ export class Runner3D {
       if (k === "pod") {
         const n = 1 + (Math.random() < 0.35 + hard * 0.3 ? 1 : 0) + (Math.random() < hard * 0.4 ? 1 : 0);
         // a moving train only when no other lane has a train anywhere ahead (it would catch up and wall you in)
-        const moving = Math.random() < 0.12 + hard * 0.25 && ![0, 1, 2].some((x) => x !== l && (trainAhead(x) || row[x] === "pod" || this.busy[x] > this.dist));
+        const moving = this.t > 30 && Math.random() < 0.12 + hard * 0.25 && ![0, 1, 2].some((x) => x !== l && (trainAhead(x) || row[x] === "pod" || this.busy[x] > this.dist));
         const len = n * CAR + (n - 1) * CAR_GAP;
         this.busy[l] = this.dist + len + (moving ? 70 : 6);
         this.add("pod", l, SPAWN_Z, 0, { n, moving });
@@ -991,6 +1046,37 @@ export class Runner3D {
         this.add("pw", lanes[Math.floor(Math.random() * lanes.length)], SPAWN_Z - 8, 1.1, undefined, pw);
       }
     }
+    this.placeMystery(open.filter((l) => row[l] === null && l !== cl));
+  }
+
+  /** CardicX mystery box: navy crate with the X mark, gold ribbon and a beam of light so you see it coming. */
+  private buildMystery() {
+    if (!this.mbTpl) {
+      const g = new THREE.Group();
+      const face = canvasTex(256, 256, (c) => {
+        const gr = c.createLinearGradient(0, 0, 256, 256); gr.addColorStop(0, "#26368a"); gr.addColorStop(1, "#0b1236");
+        c.fillStyle = gr; c.fillRect(0, 0, 256, 256);
+        c.strokeStyle = "rgba(120,170,255,.35)"; c.lineWidth = 6; c.strokeRect(14, 14, 228, 228);
+        c.strokeStyle = "#ffffff"; c.lineWidth = 9; c.beginPath(); c.roundRect(84, 84, 88, 88, 10); c.stroke();
+        c.fillStyle = "#ffffff";
+        for (const [a, b, d] of [[96, 96, 1], [160, 96, -1]] as const) { c.beginPath(); c.moveTo(a, b); c.lineTo(a + 32 * d, 128); c.lineTo(a, 160); c.closePath(); c.fill(); }
+      });
+      const box = new THREE.Mesh(new RoundedBoxGeometry(0.95, 0.95, 0.95, 4, 0.1), new THREE.MeshStandardMaterial({ map: face, roughness: 0.35, metalness: 0.2, emissive: 0x2244aa, emissiveIntensity: 0.35 }));
+      g.add(box);
+      const gold = new THREE.MeshStandardMaterial({ color: 0xffc83d, emissive: 0x8a5a00, emissiveIntensity: 0.6, metalness: 0.6, roughness: 0.25 });
+      g.add(new THREE.Mesh(new THREE.BoxGeometry(0.99, 0.99, 0.16), gold), new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.99, 0.99), gold));
+      for (const sx of [-1, 1]) {
+        const bow = new THREE.Mesh(new THREE.TorusGeometry(0.15, 0.05, 10, 24), gold);
+        bow.position.set(sx * 0.14, 0.58, 0); bow.rotation.set(0, Math.PI / 2, sx * 0.6); g.add(bow);
+      }
+      const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.55, 9, 24, 1, true), new THREE.MeshBasicMaterial({ color: 0xffd76a, transparent: true, opacity: 0.16, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+      beam.position.y = 4; g.add(beam);
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.85, 0.04, 8, 48), new THREE.MeshBasicMaterial({ color: new THREE.Color(0xffd76a).multiplyScalar(2), toneMapped: false }));
+      ring.rotation.x = Math.PI / 2; ring.position.y = -0.55; g.add(ring);
+      const light = new THREE.PointLight(0xffc83d, 5, 5); g.add(light);
+      this.mbTpl = g;
+    }
+    return this.mbTpl.clone();
   }
 
   private add(k: Kind, l: number, z: number, y = 0, train?: { n: number; moving: boolean }, pw?: PowerKind) {
@@ -1008,6 +1094,13 @@ export class Runner3D {
       m.position.x = lx(l); m.position.z = z;
       this.scene.add(m);
       this.objs.push({ k, l, m, len: 0, y, pw: objPw });
+      return;
+    }
+    if (k === "mb") {
+      m = this.buildMystery();
+      m.position.set(lx(l), y, z);
+      this.scene.add(m);
+      this.objs.push({ k, l, m, len: 0, y });
       return;
     }
     if (k === "c" && this.props.cheese) {
@@ -1067,6 +1160,29 @@ export class Runner3D {
     }
   }
 
+  /** Bend the rig's own bones into the hoverboard stance (blended by this.ride) and stand the feet on the deck. */
+  private applyStance(crouch: number) {
+    const m = this.model;
+    for (const r of this.rideBones) r.save.copy(r.b.quaternion);
+    if (!m || this.ride <= 0) return;
+    this.rig.updateMatrixWorld(true);
+    const inv = m.getWorldQuaternion(new THREE.Quaternion()).invert();
+    const pq = new THREE.Quaternion(), d = new THREE.Quaternion(), I = new THREE.Quaternion();
+    for (const r of this.rideBones) {
+      if (!r.b.parent) continue;
+      r.b.parent.getWorldQuaternion(pq).premultiply(inv); // parent orientation in model space
+      d.copy(I).slerp(r.q, Math.min(1, this.ride * (r.legs ? crouch : 1)));
+      r.b.quaternion.premultiply(pq.clone().invert().multiply(d).multiply(pq));
+      r.b.updateMatrixWorld(true);
+    }
+    if (!this.toes.length) return;
+    const v = new THREE.Vector3();
+    let lo = Infinity;
+    for (const t of this.toes) { t.getWorldPosition(v); this.rig.worldToLocal(v); lo = Math.min(lo, v.y); }
+    const deck = this.hoverRoot.position.y + this.boardTop + 0.02;
+    this.holder.position.y = (deck - lo) * this.ride;
+  }
+
   private playAnim(name: "run" | "jump" | "slide" | "die" | "idle") {
     const a = this.anims[name] ?? (name === "idle" ? this.anims.run : undefined);
     const key = a ? name : "";
@@ -1093,7 +1209,7 @@ export class Runner3D {
     if (running) {
       this.t += dt;
       const ramp = Math.min(1, this.t / 0.9); // ease up to speed after the turn-around
-      this.speed = (22 + Math.min(26, this.t * 0.45)) * (ramp * ramp * (3 - 2 * ramp));
+      this.speed = (16 + Math.min(32, this.t * 0.4)) * (ramp * ramp * (3 - 2 * ramp)); // gentle start, faster over time
     }
     const dz = this.mode === "dying" || this.mode === "over" ? 0 : this.speed * dt;
 
@@ -1134,7 +1250,7 @@ export class Runner3D {
       if (running) {
         this.score += dz * 1.1;
         this.next -= dz;
-        if (this.next <= 0) { this.spawnRow(); this.next = Math.max(16, this.speed * 0.8); }
+        if (this.next <= 0) { this.spawnRow(); this.next = Math.max(16, this.speed * 0.8) * (this.t < 22 ? 1.6 : 1); }
       }
       const bodyLo = this.py + 0.3, bodyHi = this.py + (sliding ? 1.1 : 2.0);
       for (const o of this.objs) {
@@ -1148,6 +1264,7 @@ export class Runner3D {
           continue;
         }
         if (o.k === "c") { o.m.rotation.y += dt * 3; o.m.position.y = o.y + Math.sin(this.t * 4 + o.m.position.z) * 0.08; }
+        if (o.k === "mb") { o.m.rotation.y += dt * 1.6; o.m.position.y = o.y + Math.sin(this.t * 4) * 0.1; if (o.hit) { o.m.visible = false; continue; } }
         if (o.k === "pw") { o.m.rotation.y += dt * 2.5; o.m.position.y = o.y + Math.sin(this.t * 5) * 0.12; if (o.hit) { o.m.visible = false; continue; } }
         // magnet: cheese ahead flies to the mouse
         if (o.k === "c" && !o.hit && running && this.power.magnet > 0 && o.m.position.z > -14 && o.m.position.z < 1) {
@@ -1168,6 +1285,8 @@ export class Runner3D {
               this.onPickup((v.x + 1) / 2 * this.el.clientWidth, (1 - v.y) / 2 * this.el.clientHeight);
             }
           }
+        } else if (o.k === "mb") {
+          if (inLane && Math.abs(z) < 1.1 && o.y > bodyLo - 0.8 && o.y < bodyHi + 0.8) { o.hit = true; this.mystery = true; this.onEvent?.("mystery"); }
         } else if (o.k === "pw") {
           if (inLane && Math.abs(z) < 1.0 && o.y > bodyLo - 0.6 && o.y < bodyHi + 0.6 && o.pw) {
             o.hit = true;
@@ -1189,7 +1308,7 @@ export class Runner3D {
       }
       for (let i = this.objs.length - 1; i >= 0; i--) {
         const o = this.objs[i];
-        if ((o.hit && o.k === "c" && (o.ht ?? 0) > 0.18) || (o.hit && o.k === "pw") || o.m.position.z - o.len / 2 > 14) { this.scene.remove(o.m); this.objs.splice(i, 1); }
+        if ((o.hit && o.k === "c" && (o.ht ?? 0) > 0.18) || (o.hit && (o.k === "pw" || o.k === "mb")) || o.m.position.z - o.len / 2 > 14) { this.scene.remove(o.m); this.objs.splice(i, 1); }
       }
       if (running) this.onHud(Math.floor(this.score), this.cheese);
     }
@@ -1208,7 +1327,7 @@ export class Runner3D {
     if (hovering && !this.hoverRoot.parent) this.rig.add(this.hoverRoot);
     if (!hovering && this.hoverRoot.parent) this.rig.remove(this.hoverRoot);
     this.hoverRoot.position.y = 0.25 + Math.sin(performance.now() / 160) * 0.05;
-    this.holder.position.y = hovering ? 0.32 : 0;
+    this.hoverRoot.rotation.z = Math.sin(performance.now() / 420) * 0.04;
     this.rig.visible = this.invuln <= 0 || Math.floor(this.invuln * 12) % 2 === 0; // blink after a saved crash
     this.rig.position.set(this.px, this.py, 0);
     this.rig.rotation.z = (this.px - tx) * 0.12;
@@ -1216,16 +1335,23 @@ export class Runner3D {
     const crouch = sliding ? 0.55 : 1;
     const squash = this.anims.slide ? 1 : crouch; // squash only when there is no slide animation
     this.holder.scale.y += (squash - this.holder.scale.y) * Math.min(1, dt * 20);
+    // on the hoverboard the mouse stands on the deck in a snowboard stance instead of running
+    const riding = hovering && this.mode === "run" && !!this.mixer;
+    this.ride += ((riding ? 1 : 0) - this.ride) * Math.min(1, dt * 8);
+    if (this.ride < 0.002) this.ride = 0;
     if (this.mixer) {
-      const want = this.mode === "dying" || this.mode === "over" ? "die" : this.mode === "idle" ? "idle" : this.py > 0.05 ? "jump" : sliding ? "slide" : "run";
+      for (const r of this.rideBones) r.b.quaternion.copy(r.save); // undo last frame's stance before the clip writes
+      const want = this.mode === "dying" || this.mode === "over" ? "die" : this.mode === "idle" || riding ? "idle" : this.py > 0.05 ? "jump" : sliding ? "slide" : "run";
       this.playAnim(want);
       if (this.anims.run) this.anims.run.timeScale = this.mode === "run" ? this.speed / 22 : 1;
       if (this.mode !== "over" || this.curAnim === "die") this.mixer.update(dt);
     }
-    this.holder.position.y = this.power.hover > 0 && this.mode !== "idle" ? 0.32 : 0; // ride on the hoverboard
+    this.holder.position.y = 0;
     const wantTurn = this.mode === "idle" ? Math.PI : 0;
     this.turn += (wantTurn - this.turn) * Math.min(1, dt * 9);
-    this.holder.rotation.y = this.turn;
+    this.holder.rotation.y = this.turn + this.ride * 0.55; // sideways stance
+    if (this.mixer) this.applyStance(sliding ? 1.3 : this.py > 0.05 ? 1.15 : 1);
+    else this.holder.position.y = hovering ? 0.32 : 0;
     this.updateSnack(dt);
     const fov = this.baseFov + (this.mode === "run" ? Math.min(8, (this.speed - 22) * 0.3) : 0);
     if (Math.abs(this.camera.fov - fov) > 0.05) { this.camera.fov += (fov - this.camera.fov) * Math.min(1, dt * 3); this.camera.updateProjectionMatrix(); }
@@ -1236,10 +1362,13 @@ export class Runner3D {
     if (this.cat.children.length) {
       const active = this.mode === "run" || this.mode === "dying" || this.mode === "over";
       if (this.mode === "run") this.catNear = Math.max(0, this.catNear - dt);
-      const want = !active ? 14 : this.mode !== "run" ? 1.6 : this.catNear > 0 ? 3.6 : 12;
+      const want = !active ? 14 : this.mode !== "run" ? 2.2 : this.catNear > 0 ? 3.9 : 12;
       this.catZ += (want - this.catZ) * Math.min(1, dt * (want < this.catZ ? 3 : 1.2));
       this.cat.visible = active && this.catZ < 8;
-      this.cat.position.set(this.px * 0.8 + (this.px > 0.5 ? -1.1 : 1.1), 0, this.catZ); // off to the side so the mouse stays visible
+      // the cat runs in your lane, a beat behind your lane changes; the camera looks over its head
+      this.catX += (this.px - this.catX) * Math.min(1, dt * 5);
+      this.cat.position.set(this.catX, 0, this.catZ);
+      this.cat.rotation.y = (this.px - this.catX) * -0.35;
       if (this.mode !== "over") this.catMixer?.update(dt * (this.mode === "run" ? this.speed / 22 : 1));
     }
     // camera

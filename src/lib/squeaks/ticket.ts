@@ -4,7 +4,7 @@ import "server-only";
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 function key() {
-  const base = process.env.SQ_TICKET_SECRET || process.env.SQUEAKS_PARTNER_SECRET;
+  const base = process.env.SQ_TICKET_SECRET || process.env.SQUEAKS_PARTNER_SECRET || process.env.PRIVY_APP_SECRET;
   if (!base) throw new Error("ticket_secret_missing");
   return createHmac("sha256", base).update("squeaks-ticket-v1").digest();
 }

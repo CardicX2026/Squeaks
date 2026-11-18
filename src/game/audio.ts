@@ -4,7 +4,7 @@
  * - SFX: polished game sounds through a compressor.
  * - Voice: an original squeaky "mouse" voice (pitch-gliding chirps through a formant filter).
  */
-export type Sfx = "pickup" | "jump" | "slide" | "lane" | "laneL" | "laneR" | "crash" | "land" | "start" | "click" | "gift" | "powerup" | "shield" | "bonk" | "golden" | "whiff" | "snap" | "level" | "wrong" | "tick";
+export type Sfx = "pickup" | "jump" | "slide" | "lane" | "laneL" | "laneR" | "crash" | "land" | "start" | "click" | "gift" | "powerup" | "shield" | "bonk" | "golden" | "whiff" | "snap" | "level" | "wrong" | "tick" | "mystery" | "reveal";
 
 const KEY = "sq_audio_v1";
 const BPM = 124;
@@ -168,6 +168,13 @@ class GameAudio {
       // Squeaks Says
       case "level": [523.3, 659.3, 784, 1046.5, 784, 1046.5].forEach((f, i) => this.osc("square", f, t + i * 0.06, 0.12, 0.05, out)); break;
       case "wrong": this.osc("sawtooth", 220, t, 0.45, 0.18, out, 110); this.osc("sawtooth", 233, t, 0.45, 0.12, out, 116); break;
+      case "mystery": // shimmering sparkle run + a happy squeak
+        [1318.5, 1568, 1975.5, 2349.3, 2637, 3136].forEach((f, i) => this.osc("sine", f, t + i * 0.045, 0.28, 0.07, out));
+        this.noise(t, 0.6, 0.05, "highpass", 6000, 9000, out); this.voice("whoa"); break;
+      case "reveal": // box opens: soft thump, then a bright chord
+        this.osc("sine", 160, t, 0.18, 0.2, out, 80);
+        [523.3, 659.3, 784, 1046.5, 1318.5].forEach((f) => this.osc("triangle", f, t + 0.12, 0.9, 0.06, out));
+        this.noise(t + 0.1, 0.5, 0.04, "highpass", 5000, 9000, out); this.voice("yay"); break;
       case "tick": this.osc("triangle", 1800, t, 0.03, 0.05, out); break;
       case "gift": [784, 988, 1175, 1568].forEach((f, i) => this.osc("triangle", f, t + i * 0.08, 0.2, 0.12, out)); this.voice("yay"); break;
     }

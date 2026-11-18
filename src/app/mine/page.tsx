@@ -55,7 +55,7 @@ export default function Mine() {
   return (
     <Shell theme="game">
       <PageHead eyebrow="Cheese Mine" title={<>Mine Cheese while <span className="yel">you sleep.</span></>} img="chef">
-        Start a shift, come back in {MINE_HOURS} hours, collect, repeat. Upgrade your crew to dig more each time.
+        Start a shift, come back in {MINE_HOURS} hours and collect your Cheese. Then start the next one.
       </PageHead>
       <section className="wrap" style={{ paddingBottom: 0 }}><GameNav /></section>
 
@@ -107,7 +107,7 @@ export default function Mine() {
               <p className="muted">Each level adds a worker and <b style={{ color: "var(--text)" }}>+{fmt(mineYield(1))} Cheese</b> per shift. Upgrade between shifts.</p>
               <div className="row" style={{ marginTop: 16 }}>
                 {lvl < MINE_MAX_LEVEL ? <Price price={100 * lvl * lvl} /> : <span className="muted">Max level reached</span>}
-                <button className="btn btn-ghost btn-sm" disabled title="Crew upgrades open once player data is saved on the server">Coming soon</button>
+                <button className="btn btn-ghost btn-sm" disabled title="Crew upgrades are coming soon">Coming soon</button>
               </div>
             </div>
 

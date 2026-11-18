@@ -8,6 +8,7 @@ import { GameIcon } from "@/components/game-icons";
 import { audio } from "@/game/audio";
 import { cheeseMsg, useCheese, type CreditRes } from "@/lib/cheese-client";
 import { getGame, setBest, useAccountState, useToast } from "@/lib/store";
+import { CheeseLoader, useImagePreload } from "@/components/cheese-loader";
 
 export type GameId = "hammer" | "says";
 export type Result = { score: number; best: boolean; credited: number | null; capped?: boolean; note?: string; practice?: boolean };
@@ -56,10 +57,16 @@ export function useGameAudio() {
   return { snd, toggle };
 }
 
-export function MiniShell({ children, theme }: { children: ReactNode; theme: "hammer" | "says" }) {
+export function MiniShell({ children, theme, assets, label, tips }: { children: ReactNode; theme: "hammer" | "says"; assets: string[]; label: string; tips: string[] }) {
   const saved = useAccountState();
   const t = useToast();
   const { snd, toggle } = useGameAudio();
+  // same cheese loading screen as Cheese Chase while the artwork loads (shown for at least a moment)
+  const p = useImagePreload(assets);
+  const [minDone, setMinDone] = useState(false);
+  const [ready, setReady] = useState(false);
+  useEffect(() => { const tm = setTimeout(() => setMinDone(true), 1200); return () => clearTimeout(tm); }, []);
+  useEffect(() => { if (p < 1 || !minDone) return; const tm = setTimeout(() => setReady(true), 450); return () => clearTimeout(tm); }, [p, minDone]);
   return (
     <div className={`gameapp mg mg-${theme}`}>
       <div className="mg-stage">
@@ -69,7 +76,7 @@ export function MiniShell({ children, theme }: { children: ReactNode; theme: "ha
           <button className={`gm-round sm${snd.sfx ? "" : " off"}`} onClick={() => toggle("sfx")} aria-label="Sound effects" aria-pressed={snd.sfx}><GameIcon n="sound" s={20} /></button>
           <Link href="/play" className="gm-round sm" aria-label="Back to the arcade"><GameIcon n="close" s={18} /></Link>
         </div>
-        {children}
+        {ready ? children : <CheeseLoader p={minDone ? p : Math.min(p, 0.85)} label={label} tips={tips} />}
       </div>
       {t && <div className="toast" role="status">{t}</div>}
     </div>

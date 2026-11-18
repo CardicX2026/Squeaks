@@ -35,7 +35,7 @@ export default function Rewards() {
   return (
     <Shell theme="game">
       <PageHead eyebrow="Rewards" title={<>Show up, <span className="yel">get paid in Cheese</span></>} img="cozy">
-        A daily Cheese gift and three missions that reset every day at 00:00 UTC. Missions are checked against your real activity.
+        Claim a free Cheese gift every day and finish three daily missions for more. Everything resets at 00:00 UTC.
       </PageHead>
       <section className="wrap" style={{ paddingBottom: 0 }}><GameNav /></section>
       <section className="wrap two">

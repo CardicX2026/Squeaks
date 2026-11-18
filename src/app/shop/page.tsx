@@ -1,8 +1,9 @@
 "use client";
 /* eslint-disable @next/next/no-img-element */
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { PageHead, Price, Shell, GameNav } from "@/components/ui";
-import { addBoost, addOwned, equip, ITEMS, priceOf, toast, useAccountState, useGame, type Cat } from "@/lib/store";
+import { addBoost, addOwned, equip, item, ITEMS, priceOf, toast, useAccountState, useGame, type Cat } from "@/lib/store";
 import { cheeseMsg, isPaused, useCheese } from "@/lib/cheese-client";
 import { purchase } from "@/lib/purchase";
 
@@ -13,6 +14,9 @@ export default function Shop() {
   const saved = useAccountState();
   const cheese = useCheese();
   const [busy, setBusy] = useState("");
+  const router = useRouter();
+  // a new character goes straight back to the Cheese Chase menu, where it stands ready to run
+  const showSkin = (id: string) => { if (item(id)?.cat === "Skins") router.push("/play/cheese-chase"); };
   // debit on CardicX first; grant the item only after a 200
   const buy = async (id: string, name: string, boost: boolean) => {
     if (!cheese.authed) return cheese.gate("shop");
@@ -24,7 +28,7 @@ export default function Shop() {
         () => cheese.call<{ balance: number; duplicate?: boolean }>("/buy", { itemId: id, orderId }),
         (r) => {
           if (boost) { if (!r.duplicate) addBoost(id); toast(`${name} added`); }
-          else { addOwned(id); toast(r.duplicate ? `${name} is already yours` : `${name} unlocked and equipped`); }
+          else { addOwned(id); toast(r.duplicate ? `${name} is already yours` : `${name} unlocked and equipped`); showSkin(id); }
         },
       );
     } catch (e) { toast(isPaused(e) ? "Cheese is temporarily unavailable" : cheeseMsg(e)); }
@@ -34,7 +38,7 @@ export default function Shop() {
   return (
     <Shell theme="game">
       <PageHead eyebrow="Shop" title={<>Dress the <span className="yel">mouse</span></>} img="space">
-        Skins, hats and trails show up in Cheese Chase. Boosts are used one per run. Paid for with Cheese, the same balance you have on CardicX.
+        New characters, hats, trails and boosters for Cheese Chase. You pay with Cheese, the same balance you have on CardicX.
       </PageHead>
       <section className="wrap" style={{ paddingBottom: 0 }}><GameNav /></section>
       <section className="wrap">
@@ -59,7 +63,7 @@ export default function Shop() {
                   {boost || !owned ? (
                     <button className="btn btn-play btn-sm" disabled={busy === i.id || (saved !== null && saved.cheese < priceOf(i))} onClick={() => buy(i.id, i.name, boost)}>{busy === i.id ? "…" : boost ? "Add" : "Get"}</button>
                   ) : (
-                    <button className="btn btn-ghost btn-sm" disabled={eq && i.cat === "Skins"} onClick={() => equip(i.id)}>{eq ? (i.cat === "Skins" ? "Equipped" : "Remove") : "Equip"}</button>
+                    <button className="btn btn-ghost btn-sm" disabled={eq && i.cat === "Skins"} onClick={() => { equip(i.id); if (i.cat === "Skins") { toast(`${i.name} equipped`); showSkin(i.id); } }}>{eq ? (i.cat === "Skins" ? "Equipped" : "Remove") : "Equip"}</button>
                   )}
                 </div>
               </div>

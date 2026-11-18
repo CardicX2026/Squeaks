@@ -8,6 +8,7 @@ import { fmt } from "@/components/ui";
 const ROUND_MS = 45_000;
 const MICE = Array.from({ length: 24 }, (_, i) => `/nft/n${String(i + 1).padStart(2, "0")}.webp`);
 type Kind = "mouse" | "gold" | "trap";
+const HAMMER_TIPS = ["Golden mice are worth 5 times more.", "Never hit a mousetrap: it costs 30 points.", "5 hits in a row raises your multiplier.", "Missing resets your combo, so aim well."];
 type Hole = { id: number; kind: Kind; img: string; until: number; hit?: boolean };
 type Pop = { id: number; x: number; y: number; text: string; cls: string };
 
@@ -132,7 +133,7 @@ export default function HammerGame() {
 
   const secs = Math.ceil(left / 1000);
   return (
-    <MiniShell theme="hammer">
+    <MiniShell theme="hammer" assets={["/games/slot-2.webp", ...MICE]} label="Digging the burrows…" tips={HAMMER_TIPS}>
       {phase === "menu" && (
         <MiniMenu game="hammer" poster="/games/slot-2.webp" title="Hammer the Squeaks"
           how={["Bonk the mice as they pop up", "Golden mice are worth 5x", "Don't hit the mousetraps!", "Every 5 hits in a row raises your multiplier"]}

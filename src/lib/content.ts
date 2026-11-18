@@ -2,6 +2,13 @@
 // Update here and every page follows.
 
 export const CARDICX = "https://cardicx.com";
+export const CARDICX_SUPPORT = "https://cardicx.com";
+/**
+ * The CardicX mystery box in Cheese Chase. While a device has opened fewer than `previewBoxes`
+ * boxes it shows up early (at `previewAt` metres) so it is quick to see; after that it is a
+ * milestone at `milestoneAt` metres. Set previewBoxes to 0 to make it milestone-only.
+ */
+export const MYSTERY = { previewBoxes: 3, previewAt: 220, milestoneAt: 4000 };
 // From the Squeaks docs FAQ
 export const SOCIALS = [
   { n: "Telegram", h: "https://t.me/squeaks_official", i: "tg" },
@@ -23,9 +30,9 @@ export const MINT = {
  * until then the card uses `fallback` or a styled placeholder.
  */
 export const GAMES = [
-  { id: "cheese-chase", name: "Cheese Chase", desc: "Run the neon rails of Cheese City. Dodge, jump, slide and stack Cheese.", img: "/games/cheese-chase.webp", fallback: "/mice/chase.webp", href: "/play/cheese-chase", live: true },
-  { id: "hammer", name: "Hammer the Squeaks", desc: "Mice pop up, you bonk them with the golden hammer. Fast hands win the Cheese.", img: "/games/slot-2.webp", fallback: "", href: "/play/hammer", live: true },
-  { id: "says", name: "Squeaks Says", desc: "Watch the pattern, repeat it back. How long can your memory keep up?", img: "/games/slot-3.webp", fallback: "", href: "/play/says", live: true },
+  { id: "cheese-chase", name: "Cheese Chase", desc: "Run through Cheese City, dodge the trains and grab Cheese before the cat catches you.", img: "/games/cheese-chase.webp", fallback: "/mice/chase.webp", href: "/play/cheese-chase", live: true },
+  { id: "hammer", name: "Hammer the Squeaks", desc: "Mice pop out of their holes. Tap them fast, skip the mousetraps and build a combo.", img: "/games/slot-2.webp", fallback: "", href: "/play/hammer", live: true },
+  { id: "says", name: "Squeaks Says", desc: "Four mice sing a tune. Repeat it back, one note longer every round.", img: "/games/slot-3.webp", fallback: "", href: "/play/says", live: true },
 ];
 
 export const DOCS = "https://squeaksfun.gitbook.io/squeaks";

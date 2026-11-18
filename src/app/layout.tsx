@@ -2,10 +2,20 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { AuthProvider } from "@/components/auth";
 
+const SITE = process.env.NEXT_PUBLIC_SITE_URL
+  || (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "http://localhost:3001");
+const TITLE = "Squeaks ($SQKS) | The loudest meme in the trenches";
+const DESC = "The official meme token of CardicX on Solana. Play free arcade games, earn Cheese, collect the 444 CDXLIV mice and squeak louder than the rest.";
+
 export const metadata: Metadata = {
-  title: "Squeaks ($SQKS) — The loudest mouse in the trenches",
-  description:
-    "Squeaks is a meme-culture community on Solana with real products behind it: the CDXLIV NFT membership, Cheese Chase, merch and rewards that plug into CardicX.",
+  metadataBase: new URL(SITE),
+  title: TITLE,
+  description: DESC,
+  openGraph: {
+    type: "website", siteName: "Squeaks", title: TITLE, description: DESC, url: "/",
+    images: [{ url: "/og.jpg", width: 1200, height: 630, alt: "The Squeaks mice waving from giant cheese letters spelling SQKS" }],
+  },
+  twitter: { card: "summary_large_image", site: "@squeaksfun", title: TITLE, description: DESC, images: ["/og.jpg"] },
 };
 
 export const viewport: Viewport = { themeColor: "#0b1028" };

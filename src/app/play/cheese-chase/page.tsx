@@ -13,8 +13,12 @@ import { audio } from "@/game/audio";
 import { useAccount } from "@/components/auth";
 import { useAccountState } from "@/lib/store";
 import { cheeseMsg, useCheese, type CreditRes } from "@/lib/cheese-client";
+import { MysteryReveal } from "@/components/mystery";
+import { CheeseLoader } from "@/components/cheese-loader";
+import { MYSTERY } from "@/lib/content";
+import { addPass, noteBox } from "@/lib/store";
 
-type Res = { score: number; cheese: number | null; points: number; best: boolean; practice?: boolean; capped?: boolean; note?: string };
+type Res = { score: number; cheese: number | null; points: number; best: boolean; practice?: boolean; capped?: boolean; note?: string; mystery?: boolean };
 type Phase = "menu" | "run" | "paused" | "over";
 const KEYS: Record<string, Action> = { ArrowLeft: "l", a: "l", ArrowRight: "r", d: "r", ArrowUp: "j", w: "j", " ": "j", ArrowDown: "s", s: "s" };
 const BOOSTS = [
@@ -29,6 +33,8 @@ export default function CheeseChase() {
   const acct = useAccount();
   const saved = useAccountState();
   const ticketRef = useRef<string | null>(null);
+  const lastTicket = useRef<string | null>(null); // kept after the run for the mystery box code
+  const [boxDone, setBoxDone] = useState(false);
   const cheese = useCheese();
   const cheeseRef = useRef(cheese);
   cheeseRef.current = cheese;
@@ -68,19 +74,23 @@ export default function CheeseChase() {
           if (cheeseEl.current) cheeseEl.current.textContent = String(c);
         },
         onEnd: (s, c) => {
-          if (practice.current) { setRes({ score: s, cheese: c, points: 0, best: false, practice: true }); setPhase("over"); return; }
+          const mystery = !!e?.gotMystery;
+          if (practice.current) { setRes({ score: s, cheese: c, points: 0, best: false, practice: true, mystery }); setPhase("over"); return; }
           // the server checks the run and decides the Cheese; CardicX credits it once (ref run_<id>)
           const tk = ticketRef.current; ticketRef.current = null;
-          setRes({ score: s, cheese: null, points: 0, best: s > getGame().best });
+          setRes({ score: s, cheese: null, points: 0, best: s > getGame().best, mystery });
           setPhase("over");
-          const done = (credited: number, capped = false, note?: string) => { const l = finishRun(s, credited); setRes({ score: s, cheese: credited, points: l.points, best: l.best, capped, note }); };
+          const done = (credited: number, capped = false, note?: string) => { const l = finishRun(s, credited); setRes({ score: s, cheese: credited, points: l.points, best: l.best, capped, note, mystery }); };
           if (!tk) { done(0, false, "This run could not be verified, so no Cheese this time."); return; }
           cheeseRef.current.call<CreditRes>("/run/finish", { ticket: tk, score: s, cheese: c })
             .then((r) => done(r.credited, r.capped))
             .catch((e) => done(0, false, cheeseMsg(e)));
         },
         // a collected wedge flies from where it was picked up into the HUD counter
-        onEvent: (ev) => audio().sfx(ev),
+        onEvent: (ev) => {
+          audio().sfx(ev);
+          if (ev === "mystery") { noteBox(); toast("Mystery box! It opens when your run ends"); }
+        },
         onPowers: (p) => setPowers(p),
         onPickup: (x, y) => {
           audio().sfx("pickup");
@@ -140,8 +150,8 @@ export default function CheeseChase() {
     practice.current = asGuest;
     setPowers([]);
     audio().unlock();
-    ticketRef.current = null;
-    if (!asGuest && acct.authed) cheese.call<{ ticket: string }>("/run/start", {}).then((r) => { ticketRef.current = r.ticket; }).catch(() => {});
+    ticketRef.current = null; lastTicket.current = null; setBoxDone(false);
+    if (!asGuest && acct.authed) cheese.call<{ ticket: string }>("/run/start", {}).then((r) => { ticketRef.current = r.ticket; lastTicket.current = r.ticket; }).catch(() => {});
     setFlyers([]);
     const st = getGame();
     const used = spendBoosts(pick);
@@ -150,7 +160,9 @@ export default function CheeseChase() {
     if (scoreEl.current) scoreEl.current.textContent = used.head ? "500" : "0";
     if (cheeseEl.current) cheeseEl.current.textContent = "0";
     if (eng.current) eng.current.paused = false;
-    eng.current?.start({ trail: item(st.equip.Trails)?.color ?? "", ...used });
+    // the CardicX mystery box: early for a player's first few boxes, then a distance milestone
+    const mysteryAt = (st.boxes ?? 0) < MYSTERY.previewBoxes ? MYSTERY.previewAt : MYSTERY.milestoneAt;
+    eng.current?.start({ trail: item(st.equip.Trails)?.color ?? "", ...used, mysteryAt });
     setPhase("run");
   };
   const pause = () => { if (eng.current) eng.current.paused = true; setPhase("paused"); };
@@ -232,14 +244,14 @@ export default function CheeseChase() {
             </div>
 
             <div className="gm-bottom">
-              <Link href="/shop" className="gm-skin">Skin: <b>{item(g.equip.Skins)?.name}</b> · change</Link>
+              <Link href="/shop" className="gm-skin">Character: <b>{item(g.equip.Skins)?.name}</b> · Change</Link>
               <button className="gm-play" onClick={play}>PLAY</button>
-              {acct.enabled && !acct.authed && <button className="gm-skin" onClick={acct.login}>Log in to save your progress and earn points →</button>}
-              <p>Swipe ← → to switch lanes · ↑ jump · ↓ slide</p>
+              {acct.enabled && !acct.authed && <button className="gm-skin" onClick={acct.login}>Log in to earn Cheese →</button>}
+              <p>Swipe left or right to change lanes, up to jump, down to slide</p>
             </div>
           </div>
         )}
-        {phase === "menu" && !ready && <CheeseLoader p={load} />}
+        {phase === "menu" && !ready && <CheeseLoader p={load} label="Loading Cheese City…" tips={TIPS} />}
 
         {/* ---------- RUN HUD ---------- */}
         {(phase === "run" || phase === "paused") && (
@@ -277,13 +289,27 @@ export default function CheeseChase() {
           </div>
         )}
 
-        {phase === "over" && res && (
+        {phase === "over" && res?.mystery && !boxDone && (
+          <MysteryReveal
+            authed={(acct.authed && !res.practice)}
+            onLogin={acct.login}
+            onDone={() => setBoxDone(true)}
+            getCode={async () => {
+              const tk = lastTicket.current;
+              if (!tk) return null;
+              const r = await cheese.call<{ code: string }>("/mystery", { ticket: tk });
+              addPass(r.code);
+              return r.code;
+            }}
+          />
+        )}
+        {phase === "over" && res && (!res.mystery || boxDone) && (
           <div className="gm-sheet" onPointerDown={(e) => e.stopPropagation()}>
             <div className="gm-panel">
               {res.best && <span className="gm-ribbon">New high score!</span>}
               <small className="muted">Score</small>
               <h2 className="gm-score">{fmt(res.score)}</h2>
-              {res.practice && <p className="guestnote">Practice run: rewards are not saved. Log in to keep your {res.cheese} Cheese next time.</p>}
+              {res.practice && <p className="guestnote">This was a practice run, so nothing was saved. Log in to keep your Cheese next time.</p>}
               {res.practice && <button className="btn btn-sky btn-block" onClick={acct.login}>Log in to earn</button>}
               {res.capped && <p className="guestnote">You reached today&apos;s Cheese limit from Squeaks.</p>}
               {res.note && <p className="guestnote">{res.note}</p>}
@@ -306,36 +332,9 @@ export default function CheeseChase() {
 }
 
 const TIPS = [
-  "Swipe up to jump the striped barriers.",
-  "Swipe down to slide under the laser gates.",
-  "Cargo pods fill a lane. Switch lanes early!",
-  "Cheese arcs over barriers. Jump to grab it.",
+  "Swipe up to jump over the striped barriers.",
+  "Swipe down to slide under the low gates.",
+  "A train fills its whole lane. Switch lanes early!",
+  "Cheese floats over barriers. Jump to grab it.",
+  "Grab the hoverboard: it saves you from one hit.",
 ];
-
-/** Cheese wedge that fills from the bottom as the game loads. */
-function CheeseLoader({ p }: { p: number }) {
-  const [tip, setTip] = useState(0);
-  const [shown, setShown] = useState(0);
-  useEffect(() => { const t = setInterval(() => setTip((i) => (i + 1) % TIPS.length), 2200); return () => clearInterval(t); }, []);
-  useEffect(() => {
-    const t = setInterval(() => setShown((v) => Math.min(Math.max(p, Math.min(0.9, v + 0.004)), v + Math.max(0.006, (p - v) * 0.2))), 30);
-    return () => clearInterval(t);
-  }, [p]);
-  const pct = Math.round(Math.min(1, shown) * 100);
-  return (
-    <div className="loader" role="status" aria-label={`Loading ${pct}%`}>
-      <svg viewBox="0 0 120 100" aria-hidden>
-        <defs><clipPath id="wedge"><path d="M8 62 92 18a10 10 0 0 1 20 6v54a8 8 0 0 1-8 8H16a8 8 0 0 1-8-8z" /></clipPath></defs>
-        <path d="M8 62 92 18a10 10 0 0 1 20 6v54a8 8 0 0 1-8 8H16a8 8 0 0 1-8-8z" fill="rgba(255,255,255,0.08)" stroke="rgba(255,200,61,0.5)" strokeWidth="2" />
-        <g clipPath="url(#wedge)">
-          <rect x="0" y={100 - pct} width="120" height="100" fill="#ffc83d" />
-          <rect x="0" y={100 - pct} width="120" height="4" fill="#ffe27a" />
-          <circle cx="34" cy="70" r="7" fill="#e09a00" /><circle cx="70" cy="58" r="6" fill="#e09a00" /><circle cx="92" cy="74" r="5" fill="#e09a00" /><circle cx="98" cy="40" r="4" fill="#e09a00" />
-        </g>
-      </svg>
-      <b>{pct}%</b>
-      <div className="lbar"><i style={{ width: `${pct}%` }} /></div>
-      <p className="tip">Loading Cheese City… {TIPS[tip]}</p>
-    </div>
-  );
-}

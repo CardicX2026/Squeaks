@@ -27,6 +27,9 @@ export type S = {
   day: { d: string; runs: number; bigRun: number; mined: number; points: number; claimed: string[] };
   ref: string;
   bests: Record<string, number>;
+  /** CardicX free-access pass codes found in mystery boxes, and how many boxes were opened. */
+  passes: { code: string; t: number }[];
+  boxes: number;
 };
 
 export const today = () => new Date().toISOString().slice(0, 10);
@@ -45,6 +48,8 @@ const DEF: S = {
   day: freshDay(),
   ref: "",
   bests: {},
+  passes: [],
+  boxes: 0,
 };
 
 const KEY = "sq_state_v3"; // new key: older guest Cheese balances are not carried over
@@ -182,3 +187,9 @@ export function setAccount(a: AccountState) { account = a ? { handle: a.handle, 
 export function setBalance(cheese: number) { account = { handle: account?.handle ?? null, points: account?.points ?? 0, best_score: account?.best_score ?? 0, cheese }; aSubs.forEach((f) => f()); }
 export const useAccountState = () =>
   useSyncExternalStore((f) => { aSubs.add(f); return () => { aSubs.delete(f); }; }, () => account, () => null);
+
+/* ---- CardicX mystery box ---- */
+export function noteBox() { set((s) => ({ ...s, boxes: (s.boxes ?? 0) + 1 })); }
+export function addPass(code: string) {
+  set((s) => ((s.passes ?? []).some((p) => p.code === code) ? s : { ...s, passes: [{ code, t: Date.now() }, ...(s.passes ?? [])].slice(0, 20) }));
+}

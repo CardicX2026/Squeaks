@@ -37,7 +37,7 @@ export default function Leaderboard() {
   return (
     <Shell theme="game">
       <PageHead eyebrow="Leaderboard" title={<>Top <span className="yel">runners</span></>} img="karate">
-        Best single run per player. Daily resets at 00:00 UTC, weekly on Monday. Seasons come later.
+        The best Cheese Chase run of each player. The daily board resets at 00:00 UTC and the weekly board every Monday.
       </PageHead>
       <section className="wrap" style={{ paddingBottom: 0 }}><GameNav /></section>
       <section className="wrap" style={{ maxWidth: 760 }}>
@@ -56,7 +56,7 @@ export default function Leaderboard() {
               <span className="sc">{fmt(r.score)}</span>
             </div>
           ))}
-          {!live && <p className="muted small" style={{ marginTop: 14 }}>The live board appears as soon as the first verified runs land. These names are a preview; your own best run is real.</p>}
+          {!live && <p className="muted small" style={{ marginTop: 14 }}>These names are examples until the first scores come in. Your own best run is real.</p>}
         </div>
         <div style={{ marginTop: 20, textAlign: "center" }}><Link href="/play" className="btn btn-play">Beat your best: {fmt(g.best)}</Link></div>
       </section>

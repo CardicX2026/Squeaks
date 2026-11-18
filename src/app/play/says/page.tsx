@@ -11,6 +11,7 @@ const PADS = [
   { img: "/nft/n07.webp", name: "Sweet", color: "#f5a3a7" },
   { img: "/nft/n22.webp", name: "Vinyl", color: "#6fb0f0" },
 ];
+const SAYS_TIPS = ["Each mouse sings its own note: listen as well as watch.", "Every round adds one note to the song.", "The song gets faster as you go.", "One wrong tap ends the round."];
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export default function SaysGame() {
@@ -74,7 +75,7 @@ export default function SaysGame() {
   };
 
   return (
-    <MiniShell theme="says">
+    <MiniShell theme="says" assets={["/games/slot-3.webp", ...PADS.map((x) => x.img)]} label="Warming up the singers…" tips={SAYS_TIPS}>
       {phase === "menu" && (
         <MiniMenu game="says" poster="/games/slot-3.webp" title="Squeaks Says"
           how={["Watch the mice sing a pattern", "Tap them back in the same order", "Each round adds one more note", "It gets faster as you go"]}

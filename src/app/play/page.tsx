@@ -35,7 +35,7 @@ export default function Arcade() {
   return (
     <Shell theme="game">
       <PageHead eyebrow="Squeaks arcade" title={<>Pick a <span className="yel">game.</span></>} img="/nft/n10.webp">
-        Every game earns Cheese and Squeaks points. Cheese Chase is live now, with more on the way.
+        Three games, all free to play. Log in and every game pays out Cheese you can spend in the shop.
       </PageHead>
       <section className="wrap" style={{ paddingBottom: "clamp(56px, 8vw, 96px)" }}>
         <GameNav />

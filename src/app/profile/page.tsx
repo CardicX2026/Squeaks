@@ -19,7 +19,7 @@ export default function Profile() {
     <Shell theme="game">
       <PageHead eyebrow="Profile" title={g.handle ? <>@{g.handle}</> : acct.authed ? <>{acct.label}</> : <>Guest <span className="yel">mouse</span></>} img={skin}>
         {acct.authed
-          ? "Signed in. Your Cheese lives on your CardicX account, the same balance on both sites."
+          ? "You are logged in. Your Cheese is kept on your CardicX account, so it is the same on both sites."
           : "Log in with your CardicX account to earn Cheese, mine and save your progress."}
       </PageHead>
       <section className="wrap" style={{ paddingBottom: 0 }}><GameNav /></section>
@@ -61,7 +61,7 @@ export default function Profile() {
                     <span className="pill green"><span className="dot" /> Signed in as {acct.label}</span>
                     <button className="btn btn-ghost btn-sm" onClick={acct.logout}>Log out</button>
                   </>
-                : <button className="btn btn-cx btn-sm" onClick={() => (acct.enabled ? acct.login() : toast("Login switches on once the Privy app ID is added"))}>Log in with CardicX</button>}
+                : <button className="btn btn-cx btn-sm" onClick={() => (acct.enabled ? acct.login() : toast("Login is not available right now. Please try again later."))}>Log in with CardicX</button>}
               <a className="cxl" href={CARDICX} target="_blank" rel="noreferrer">cardicx.com ↗</a>
             </div>
           </div>
@@ -74,6 +74,19 @@ export default function Profile() {
               {Object.entries(g.boosts).filter(([, n]) => n > 0).map(([id, n]) => <span key={id} className="pill gray">{item(id)?.glyph} {item(id)?.name} ×{n}</span>)}
             </div>
           </div>
+          {(g.passes ?? []).length > 0 && (
+            <div className="card">
+              <span className="eyebrow">CardicX passes</span>
+              <p className="muted small" style={{ marginTop: 8 }}>Found in mystery boxes. Send a code to support on the CardicX website to get your free access.</p>
+              {(g.passes ?? []).map((p) => (
+                <div key={p.code} className="row" style={{ padding: "10px 0", borderBottom: "1px solid var(--line)" }}>
+                  <b style={{ fontFamily: "ui-monospace, Menlo, monospace", letterSpacing: ".06em", color: "var(--cheese)" }}>{p.code}</b>
+                  <button className="btn btn-ghost btn-sm" onClick={() => navigator.clipboard?.writeText(p.code).then(() => toast("Code copied")).catch(() => {})}>Copy</button>
+                </div>
+              ))}
+              <a href={CARDICX} target="_blank" rel="noopener noreferrer" className="yel small" style={{ fontWeight: 800, display: "inline-block", marginTop: 12 }}>CardicX support ↗</a>
+            </div>
+          )}
           <div className="card">
             <span className="eyebrow">Run history</span>
             {g.runs.length === 0 && <p className="muted" style={{ marginTop: 12 }}>No runs yet. <Link href="/play" className="yel">Play Cheese Chase</Link></p>}
