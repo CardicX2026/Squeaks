@@ -13,7 +13,7 @@ import { useAccount } from "@/components/auth";
 import { runFinish, runStart } from "@/lib/sync";
 import { setAccount, useAccountState } from "@/lib/store";
 
-type Res = { score: number; cheese: number; points: number; best: boolean };
+type Res = { score: number; cheese: number; points: number; best: boolean; practice?: boolean };
 type Phase = "menu" | "run" | "paused" | "over";
 const KEYS: Record<string, Action> = { ArrowLeft: "l", a: "l", ArrowRight: "r", d: "r", ArrowUp: "j", w: "j", " ": "j", ArrowDown: "s", s: "s" };
 const BOOSTS = [
@@ -28,6 +28,7 @@ export default function CheeseChase() {
   const acct = useAccount();
   const saved = useAccountState();
   const runId = useRef<string | null>(null);
+  const practice = useRef(false);
   const acctRef = useRef(acct);
   acctRef.current = acct;
   const savedRef = useRef(saved);
@@ -64,6 +65,7 @@ export default function CheeseChase() {
           if (cheeseEl.current) cheeseEl.current.textContent = String(c);
         },
         onEnd: (s, c) => {
+          if (practice.current) { setRes({ score: s, cheese: c, points: 0, best: false, practice: true }); setPhase("over"); return; }
           const local = finishRun(s, c); // keeps missions and daily stats working
           setRes({ score: s, ...local });
           setPhase("over");
@@ -128,7 +130,10 @@ export default function CheeseChase() {
     a.sfx("click");
   };
 
-  const start = () => {
+  // guests can practise; earning needs an account (when login is switched on)
+  const play = () => (acct.enabled && !acct.authed ? acct.gate("play", () => start(true)) : start(false));
+  const start = (asGuest = false) => {
+    practice.current = asGuest;
     audio().unlock();
     runId.current = null;
     if (acct.authed) acct.token().then((tk) => (tk ? runStart(tk) : null)).then((r) => { if (r) runId.current = r.run_id; }).catch(() => {});
@@ -193,7 +198,7 @@ export default function CheeseChase() {
                 </div>
               </div>
               <div className="gm-side right">
-                <button className={`gm-gift${gift ? " on" : ""}`} disabled={!gift} onClick={() => { const n = claimDaily(); if (n) { audio().unlock(); audio().sfx("gift"); toast(`Daily gift: +${n} Cheese`); } }}>
+                <button className={`gm-gift${gift ? " on" : ""}`} disabled={!gift} onClick={() => { if (acct.enabled && !acct.authed) return acct.gate("claim"); const n = claimDaily(); if (n) { audio().unlock(); audio().sfx("gift"); toast(`Daily gift: +${n} Cheese`); } }}>
                   <span className="gm-ic big">🎁</span>
                   <span><b>{gift ? "FREE" : "Claimed"}</b><small>{gift ? `${dailyReward(Math.min(7, g.daily.streak + 1))} Cheese` : "Back tomorrow"}</small></span>
                   {gift && <i className="gm-badge">1</i>}
@@ -215,7 +220,7 @@ export default function CheeseChase() {
 
             <div className="gm-bottom">
               <Link href="/shop" className="gm-skin">Skin: <b>{item(g.equip.Skins)?.name}</b> · change</Link>
-              <button className="gm-play" onClick={start}>PLAY</button>
+              <button className="gm-play" onClick={play}>PLAY</button>
               {acct.enabled && !acct.authed && <button className="gm-skin" onClick={acct.login}>Log in to save your progress and earn points →</button>}
               <p>Swipe ← → to switch lanes · ↑ jump · ↓ slide</p>
             </div>
@@ -256,11 +261,13 @@ export default function CheeseChase() {
               {res.best && <span className="gm-ribbon">New high score!</span>}
               <small className="muted">Score</small>
               <h2 className="gm-score">{fmt(res.score)}</h2>
+              {res.practice && <p className="guestnote">Practice run: rewards are not saved. Log in to keep your {res.cheese} Cheese next time.</p>}
+              {res.practice && <button className="btn btn-sky btn-block" onClick={acct.login}>Log in to earn</button>}
               <div className="gm-earn">
                 <div><Cheese s={22} /><b>+{fmt(res.cheese)}</b><small>Cheese</small></div>
                 <div><span className="star">★</span><b>+{res.points}</b><small>Points</small></div>
               </div>
-              <button className="gm-play sm" onClick={start}>Play again</button>
+              <button className="gm-play sm" onClick={() => (res.practice ? play() : start(false))}>Play again</button>
               <div className="gm-row">
                 <button className="btn btn-ghost" onClick={toMenu}>Menu</button>
                 <Link href="/leaderboard" className="btn btn-ghost">Leaderboard</Link>
