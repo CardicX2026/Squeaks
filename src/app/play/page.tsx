@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { Cheese, fmt, GameNav, PageHead, Shell } from "@/components/ui";
 import { GAMES } from "@/lib/content";
 import { SnowCap } from "@/components/winter";
-import { useGame } from "@/lib/store";
+import { useAccountState, useGame } from "@/lib/store";
 
 /** Game artwork: tries public/games/<slot>, then a fallback, then a styled placeholder. */
 function Art({ img, fallback, name }: { img: string; fallback: string; name: string }) {
@@ -31,6 +31,7 @@ function Art({ img, fallback, name }: { img: string; fallback: string; name: str
 
 export default function Arcade() {
   const g = useGame();
+  const saved = useAccountState();
   return (
     <Shell theme="game">
       <PageHead eyebrow="Squeaks arcade" title={<>Pick a <span className="yel">game.</span></>} img="/nft/n10.webp">
@@ -39,7 +40,7 @@ export default function Arcade() {
       <section className="wrap" style={{ paddingBottom: "clamp(56px, 8vw, 96px)" }}>
         <GameNav />
         <div className="statline" data-r>
-          <span><Cheese /> Cheese<b>{fmt(g.cheese)}</b></span>
+          <span><Cheese /> Cheese<b>{saved ? fmt(saved.cheese) : "—"}</b></span>
           <span>Points<b>{fmt(g.points)}</b></span>
           <span>Best run<b>{fmt(g.best)}</b></span>
         </div>

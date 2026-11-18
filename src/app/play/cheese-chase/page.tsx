@@ -4,16 +4,16 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { Cheese, fmt } from "@/components/ui";
 import {
-  canClaimDaily, claimDaily, dailyReward, finishRun, getGame, item, missionProgress, MISSIONS,
+  canClaimDaily, dailyReward, finishRun, getGame, item, markDaily, missionProgress, MISSIONS,
   spendBoosts, toast, useGame, useToast,
 } from "@/lib/store";
 import type { Action, Runner3D } from "@/game/runner3d";
 import { audio } from "@/game/audio";
 import { useAccount } from "@/components/auth";
-import { runFinish, runStart } from "@/lib/sync";
-import { setAccount, useAccountState } from "@/lib/store";
+import { useAccountState } from "@/lib/store";
+import { cheeseMsg, useCheese, type CreditRes } from "@/lib/cheese-client";
 
-type Res = { score: number; cheese: number; points: number; best: boolean; practice?: boolean };
+type Res = { score: number; cheese: number | null; points: number; best: boolean; practice?: boolean; capped?: boolean; note?: string };
 type Phase = "menu" | "run" | "paused" | "over";
 const KEYS: Record<string, Action> = { ArrowLeft: "l", a: "l", ArrowRight: "r", d: "r", ArrowUp: "j", w: "j", " ": "j", ArrowDown: "s", s: "s" };
 const BOOSTS = [
@@ -27,12 +27,13 @@ export default function CheeseChase() {
   const t = useToast();
   const acct = useAccount();
   const saved = useAccountState();
-  const runId = useRef<string | null>(null);
+  const ticketRef = useRef<string | null>(null);
+  const cheese = useCheese();
+  const cheeseRef = useRef(cheese);
+  cheeseRef.current = cheese;
   const practice = useRef(false);
   const acctRef = useRef(acct);
   acctRef.current = acct;
-  const savedRef = useRef(saved);
-  savedRef.current = saved;
   const stage = useRef<HTMLDivElement>(null);
   const eng = useRef<Runner3D | null>(null);
   const scoreEl = useRef<HTMLSpanElement>(null);
@@ -66,18 +67,15 @@ export default function CheeseChase() {
         },
         onEnd: (s, c) => {
           if (practice.current) { setRes({ score: s, cheese: c, points: 0, best: false, practice: true }); setPhase("over"); return; }
-          const local = finishRun(s, c); // keeps missions and daily stats working
-          setRes({ score: s, ...local });
+          // the server checks the run and decides the Cheese; CardicX credits it once (ref run_<id>)
+          const tk = ticketRef.current; ticketRef.current = null;
+          setRes({ score: s, cheese: null, points: 0, best: s > getGame().best });
           setPhase("over");
-          // signed in: the server checks the run and pays the real balances
-          const id = runId.current; runId.current = null;
-          if (id && acctRef.current.authed) {
-            acctRef.current.token().then((tk) => (tk ? runFinish(tk, id, s, c) : null)).then((r) => {
-              if (!r) return;
-              setRes({ score: s, cheese: r.cheese, points: r.points, best: r.best_score <= s });
-              setAccount({ handle: savedRef.current?.handle ?? null, cheese: r.balances.cheese, points: r.balances.points, best_score: r.best_score });
-            }).catch(() => toast("Run saved on this device only (server unavailable)"));
-          }
+          const done = (credited: number, capped = false, note?: string) => { const l = finishRun(s, credited); setRes({ score: s, cheese: credited, points: l.points, best: l.best, capped, note }); };
+          if (!tk) { done(0, false, "This run could not be verified, so no Cheese this time."); return; }
+          cheeseRef.current.call<CreditRes>("/run/finish", { ticket: tk, score: s, cheese: c })
+            .then((r) => done(r.credited, r.capped))
+            .catch((e) => done(0, false, cheeseMsg(e)));
         },
         // a collected wedge flies from where it was picked up into the HUD counter
         onEvent: (ev) => audio().sfx(ev),
@@ -135,8 +133,8 @@ export default function CheeseChase() {
   const start = (asGuest = false) => {
     practice.current = asGuest;
     audio().unlock();
-    runId.current = null;
-    if (acct.authed) acct.token().then((tk) => (tk ? runStart(tk) : null)).then((r) => { if (r) runId.current = r.run_id; }).catch(() => {});
+    ticketRef.current = null;
+    if (!asGuest && acct.authed) cheese.call<{ ticket: string }>("/run/start", {}).then((r) => { ticketRef.current = r.ticket; }).catch(() => {});
     setFlyers([]);
     const st = getGame();
     const used = spendBoosts(pick);
@@ -180,7 +178,7 @@ export default function CheeseChase() {
         {phase === "menu" && ready && (
           <div className="gm">
             <div className="gm-top">
-              <Link href="/shop" className="gm-pill"><Cheese s={18} /><b>{fmt(saved?.cheese ?? g.cheese)}</b><span className="plus">+</span></Link>
+              <Link href="/shop" className="gm-pill"><Cheese s={18} /><b>{saved ? fmt(saved.cheese) : "—"}</b><span className="plus">+</span></Link>
               <span className="gm-pill pts"><span className="star">★</span><b>{fmt(saved?.points ?? g.points)}</b></span>
               <button className={`gm-round sm${snd.music ? "" : " off"}`} onClick={() => toggle2("music")} aria-label={snd.music ? "Music off" : "Music on"} aria-pressed={snd.music} title="Music">♫</button>
               <button className={`gm-round sm${snd.sfx ? "" : " off"}`} onClick={() => toggle2("sfx")} aria-label={snd.sfx ? "Sound effects off" : "Sound effects on"} aria-pressed={snd.sfx} title="Sound effects">🔊</button>
@@ -198,9 +196,17 @@ export default function CheeseChase() {
                 </div>
               </div>
               <div className="gm-side right">
-                <button className={`gm-gift${gift ? " on" : ""}`} disabled={!gift} onClick={() => { if (acct.enabled && !acct.authed) return acct.gate("claim"); const n = claimDaily(); if (n) { audio().unlock(); audio().sfx("gift"); toast(`Daily gift: +${n} Cheese`); } }}>
+                <button className={`gm-gift${gift ? " on" : ""}`} disabled={!gift} onClick={() => {
+                  if (!acct.authed) return acct.gate("claim");
+                  cheese.call<CreditRes>("/daily", {}).then((r) => {
+                    markDaily();
+                    if (r.duplicate) toast("Already claimed today");
+                    else if (r.credited === 0 && r.capped) toast("You reached today's Cheese limit from Squeaks");
+                    else { audio().unlock(); audio().sfx("gift"); toast(`Daily gift: +${r.credited} Cheese`); }
+                  }).catch((e) => toast(cheeseMsg(e)));
+                }}>
                   <span className="gm-ic big">🎁</span>
-                  <span><b>{gift ? "FREE" : "Claimed"}</b><small>{gift ? `${dailyReward(Math.min(7, g.daily.streak + 1))} Cheese` : "Back tomorrow"}</small></span>
+                  <span><b>{gift ? "FREE" : "Claimed"}</b><small>{gift ? `${dailyReward(0)} Cheese` : "Back tomorrow"}</small></span>
                   {gift && <i className="gm-badge">1</i>}
                 </button>
                 <div className="gm-boosts">
@@ -263,8 +269,10 @@ export default function CheeseChase() {
               <h2 className="gm-score">{fmt(res.score)}</h2>
               {res.practice && <p className="guestnote">Practice run: rewards are not saved. Log in to keep your {res.cheese} Cheese next time.</p>}
               {res.practice && <button className="btn btn-sky btn-block" onClick={acct.login}>Log in to earn</button>}
+              {res.capped && <p className="guestnote">You reached today&apos;s Cheese limit from Squeaks.</p>}
+              {res.note && <p className="guestnote">{res.note}</p>}
               <div className="gm-earn">
-                <div><Cheese s={22} /><b>+{fmt(res.cheese)}</b><small>Cheese</small></div>
+                <div><Cheese s={22} /><b>{res.cheese === null ? "…" : `+${fmt(res.cheese)}`}</b><small>{res.practice ? "Not saved" : "Cheese"}</small></div>
                 <div><span className="star">★</span><b>+{res.points}</b><small>Points</small></div>
               </div>
               <button className="gm-play sm" onClick={() => (res.practice ? play() : start(false))}>Play again</button>

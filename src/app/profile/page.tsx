@@ -3,12 +3,13 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { CARDICX, Cheese, fmt, PageHead, Shell, GameNav } from "@/components/ui";
-import { item, ITEMS, resetAll, setHandle, toast, useGame } from "@/lib/store";
+import { item, ITEMS, resetAll, setHandle, toast, useAccountState, useGame } from "@/lib/store";
 import { useAccount } from "@/components/auth";
 
 export default function Profile() {
   const g = useGame();
   const acct = useAccount();
+  const saved = useAccountState();
   const [h, setH] = useState("");
   useEffect(() => setH(g.handle), [g.handle]);
   const owned = ITEMS.filter((i) => g.owned.includes(i.id));
@@ -25,7 +26,7 @@ export default function Profile() {
           <div className="card">
             <span className="eyebrow">Balances</span>
             <div className="three" style={{ marginTop: 14, gap: 12 }}>
-              <div><div className="muted small">Cheese</div><div className="big" style={{ fontSize: 30 }}><Cheese s={22} />{fmt(g.cheese)}</div></div>
+              <div><div className="muted small">Cheese</div><div className="big" style={{ fontSize: 30 }}><Cheese s={22} />{saved ? fmt(saved.cheese) : "—"}</div></div>
               <div><div className="muted small">Squeaks points</div><div className="big" style={{ fontSize: 30, color: "var(--peach)" }}>{fmt(g.points)}</div></div>
               <div><div className="muted small">Best run</div><div className="big" style={{ fontSize: 30, color: "#fff" }}>{fmt(g.best)}</div></div>
             </div>

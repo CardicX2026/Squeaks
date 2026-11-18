@@ -5,14 +5,13 @@
  */
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { PrivyProvider, useLogin, usePrivy } from "@privy-io/react-auth";
-import { setAccount, toast } from "@/lib/store";
-import { fetchMe } from "@/lib/sync";
+import { addOwned, setAccount, setBalance, toast } from "@/lib/store";
 import { CARDICX } from "@/lib/content";
 
 const APP_ID = process.env.NEXT_PUBLIC_PRIVY_APP_ID || "";
 export const AUTH_ENABLED = APP_ID.length > 0;
 
-export type GateReason = "mine" | "play" | "claim";
+export type GateReason = "mine" | "play" | "claim" | "shop";
 export type Account = {
   enabled: boolean; ready: boolean; authed: boolean; label: string;
   login: () => void; logout: () => void; token: () => Promise<string | null>;
@@ -27,6 +26,7 @@ const GATE_COPY: Record<GateReason, { t: string; d: string }> = {
   mine: { t: "Log in to start mining", d: "Your Cheese Mine runs on your account, so your shifts and Cheese are saved wherever you play." },
   play: { t: "Log in to earn", d: "Signed-in runs earn Cheese and Squeaks points. You can still play as a guest for practice, without rewards." },
   claim: { t: "Log in to claim", d: "Rewards are paid to your account, so they stay safe and show up on CardicX too." },
+  shop: { t: "Log in to shop", d: "The shop uses your Cheese balance, the same Cheese you see on CardicX." },
 };
 
 function Bridge({ children }: { children: ReactNode }) {
@@ -55,7 +55,15 @@ function Bridge({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!p.ready || !p.authenticated) return;
     let live = true;
-    p.getAccessToken().then((t) => (t ? fetchMe(t) : null)).then((me) => { if (live && me) setAccount(me); }).catch(() => {});
+    // Cheese comes only from CardicX (through our server); owned items are recovered from purchase refs
+    p.getAccessToken().then(async (t) => {
+      if (!t || !live) return;
+      const h = { Authorization: `Bearer ${t}` };
+      const b = await fetch("/api/cheese/balance", { headers: h }).then((r) => (r.ok ? r.json() : null));
+      if (live && typeof b?.balance === "number") setBalance(b.balance);
+      const o = await fetch("/api/cheese/owned", { headers: h }).then((r) => (r.ok ? r.json() : null));
+      if (live && Array.isArray(o?.owned)) o.owned.forEach((id: string) => addOwned(id));
+    }).catch(() => {});
     return () => { live = false; };
   }, [p.ready, p.authenticated, p]);
 
