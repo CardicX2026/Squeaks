@@ -4,7 +4,7 @@
  * - SFX: polished game sounds through a compressor.
  * - Voice: an original squeaky "mouse" voice (pitch-gliding chirps through a formant filter).
  */
-export type Sfx = "pickup" | "jump" | "slide" | "lane" | "laneL" | "laneR" | "crash" | "land" | "start" | "click" | "gift" | "powerup" | "shield";
+export type Sfx = "pickup" | "jump" | "slide" | "lane" | "laneL" | "laneR" | "crash" | "land" | "start" | "click" | "gift" | "powerup" | "shield" | "bonk" | "golden" | "whiff" | "snap" | "level" | "wrong" | "tick";
 
 const KEY = "sq_audio_v1";
 const BPM = 124;
@@ -160,8 +160,26 @@ class GameAudio {
         break;
       case "shield": this.osc("sine", 520, t, 0.35, 0.16, out, 1040); this.noise(t, 0.3, 0.06, "bandpass", 3000, 9000, out, 2); break;
       case "click": this.osc("triangle", 1500, t, 0.04, 0.06, out); break;
+      // Hammer the Squeaks
+      case "bonk": this.osc("sine", 520, t, 0.12, 0.3, out, 140); this.noise(t, 0.06, 0.12, "bandpass", 1800, 600, out, 1.5); this.chirp(t + 0.04, 1600, 2300, 0.08, 0.14); break;
+      case "golden": [1046.5, 1318.5, 1568, 2093].forEach((f, i) => this.osc("triangle", f, t + i * 0.05, 0.16, 0.1, out)); this.voice("yay"); break;
+      case "whiff": this.whoosh(t, 0.14, 2600, 900, 0.16); break;
+      case "snap": this.osc("square", 180, t, 0.18, 0.18, out, 60); this.noise(t, 0.12, 0.3, "highpass", 2500, 1200, out); this.voice("eek"); break;
+      // Squeaks Says
+      case "level": [523.3, 659.3, 784, 1046.5, 784, 1046.5].forEach((f, i) => this.osc("square", f, t + i * 0.06, 0.12, 0.05, out)); break;
+      case "wrong": this.osc("sawtooth", 220, t, 0.45, 0.18, out, 110); this.osc("sawtooth", 233, t, 0.45, 0.12, out, 116); break;
+      case "tick": this.osc("triangle", 1800, t, 0.03, 0.05, out); break;
       case "gift": [784, 988, 1175, 1568].forEach((f, i) => this.osc("triangle", f, t + i * 0.08, 0.2, 0.12, out)); this.voice("yay"); break;
     }
+  }
+
+  /** One of the four Squeaks Says notes (a C-major pentatonic chord: C5 E5 G5 C6). */
+  pad(i: number, dur = 0.38) {
+    if (!this.ctx || !this.sfxOn) return;
+    const f = [523.25, 659.25, 783.99, 1046.5][i % 4], t = this.ctx.currentTime;
+    this.osc("triangle", f, t, dur, 0.22, this.sfxBus);
+    this.osc("sine", f * 2, t, dur * 0.8, 0.06, this.sfxBus);
+    this.chirp(t, f * 1.6, f * 2.1, Math.min(0.14, dur), 0.08);
   }
 
   /* ---------- music: original loop in C major, 124 bpm, 8 bars ---------- */

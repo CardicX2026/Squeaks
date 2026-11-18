@@ -26,6 +26,7 @@ export type S = {
   daily: { last: string };
   day: { d: string; runs: number; bigRun: number; mined: number; points: number; claimed: string[] };
   ref: string;
+  bests: Record<string, number>;
 };
 
 export const today = () => new Date().toISOString().slice(0, 10);
@@ -43,6 +44,7 @@ const DEF: S = {
   daily: { last: "" },
   day: freshDay(),
   ref: "",
+  bests: {},
 };
 
 const KEY = "sq_state_v3"; // new key: older guest Cheese balances are not carried over
@@ -142,6 +144,14 @@ export function finishRun(score: number, credited: number) {
     };
   });
   return { points, best };
+}
+
+/** Personal best per mini game; returns true when it is a new best. */
+export function setBest(game: string, score: number) {
+  const prev = getGame().bests?.[game] ?? 0;
+  if (score <= prev) return false;
+  set((s) => ({ ...s, bests: { ...(s.bests ?? {}), [game]: score } }));
+  return true;
 }
 
 /* ---- mine: the server issues a signed ticket; collecting is decided on the server ---- */

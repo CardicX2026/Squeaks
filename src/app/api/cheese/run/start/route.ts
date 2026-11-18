@@ -5,7 +5,11 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 // POST: start a run. Returns a signed ticket the browser hands back when the run ends.
-export const POST = cheeseRoute(async (_req, userId) => {
+// body { game?: "chase" | "hammer" | "says" } (defaults to chase)
+export const POST = cheeseRoute(async (req, userId) => {
+  const b = await req.json().catch(() => ({}));
+  const g = (b as { game?: string }).game;
+  const game = g === "hammer" || g === "says" ? g : "chase";
   const run_id = randomUUID();
-  return { run_id, ticket: issue({ k: "run", u: userId, rid: run_id, t: Date.now() }) };
+  return { run_id, ticket: issue({ k: "run", g: game, u: userId, rid: run_id, t: Date.now() }) };
 });
